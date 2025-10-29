@@ -258,33 +258,33 @@ def main():
         keywords = st.text_input("Search Keywords", value="butterfly", help="Enter what you want to search")
         max_results = st.number_input("Max Results", min_value=1, max_value=100, value=10, step=1)
         
-        st.subheader("Filter Options")
-        region = st.selectbox("Region", ["wt-wt", "us-en", "uk-en", "es-es", "fr-fr"], index=1)  # Default to us-en
-        safesearch = st.selectbox("Safe Search", ["off", "moderate", "on"], index=0)
-        
-        # Time limit filter
-        timelimit = st.selectbox("Time Limit", ["None", "d", "w", "m", "y"], index=0, help="d=day, w=week, m=month, y=year")
-        
-        # Page number
-        page = st.number_input("Page", min_value=1, max_value=10, value=1, step=1, help="Page number for results")
-        
-        # Backend selection
-        backend = st.selectbox("Backend", ["auto", "api", "html"], index=0, help="Search backend to use")
-        
-        # Size filter
-        size_filter = st.selectbox("Size", ["None", "Small", "Medium", "Large", "Wallpaper"])
-        
-        # Color filter
-        color_filter = st.selectbox("Color", ["None", "Monochrome", "Red", "Orange", "Yellow", "Green", "Blue", "Purple", "Pink", "Brown", "Black", "Gray", "Teal", "White"])
-        
-        # Type filter
-        type_filter = st.selectbox("Type", ["None", "Photo", "Clipart", "Gif", "Transparent", "Line"])
-        
-        # Layout filter
-        layout_filter = st.selectbox("Layout", ["None", "Square", "Tall", "Wide"])
-        
-        # License filter
-        license_filter = st.selectbox("License", ["None", "Public", "Share", "ShareCommercially", "Modify", "ModifyCommercially"])
+        with st.expander("🔧 Filter Options", expanded=False):
+            region = st.selectbox("Region", ["wt-wt", "us-en", "uk-en", "es-es", "fr-fr"], index=1)  # Default to us-en
+            safesearch = st.selectbox("Safe Search", ["off", "moderate", "on"], index=0)
+            
+            # Time limit filter
+            timelimit = st.selectbox("Time Limit", ["None", "d", "w", "m", "y"], index=0, help="d=day, w=week, m=month, y=year")
+            
+            # Page number
+            page = st.number_input("Page", min_value=1, max_value=10, value=1, step=1, help="Page number for results")
+            
+            # Backend selection
+            backend = st.selectbox("Backend", ["auto", "api", "html"], index=0, help="Search backend to use")
+            
+            # Size filter
+            size_filter = st.selectbox("Size", ["None", "Small", "Medium", "Large", "Wallpaper"])
+            
+            # Color filter
+            color_filter = st.selectbox("Color", ["None", "Monochrome", "Red", "Orange", "Yellow", "Green", "Blue", "Purple", "Pink", "Brown", "Black", "Gray", "Teal", "White"])
+            
+            # Type filter
+            type_filter = st.selectbox("Type", ["None", "Photo", "Clipart", "Gif", "Transparent", "Line"])
+            
+            # Layout filter
+            layout_filter = st.selectbox("Layout", ["None", "Square", "Tall", "Wide"])
+            
+            # License filter
+            license_filter = st.selectbox("License", ["None", "Public", "Share", "ShareCommercially", "Modify", "ModifyCommercially"])
         
         st.markdown("---")
         st.subheader("Validation")
