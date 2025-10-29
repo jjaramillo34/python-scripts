@@ -390,16 +390,27 @@ def main():
             # Display JSON format
             with st.expander("📋 View JSON Results", expanded=False):
                 json_output = {"images": results}
-                st.code(json.dumps(json_output, indent=2), language="json")
-                
-                # Download button
                 json_str = json.dumps(json_output, indent=2)
-                st.download_button(
-                    label="📥 Download JSON",
-                    data=json_str,
-                    file_name=f"{st.session_state.get('keywords', 'search')}_results.json",
-                    mime="application/json"
-                )
+                st.code(json_str, language="json")
+                
+                # Copy and Download buttons side by side
+                col1, col2 = st.columns(2)
+                
+                with col1:
+                    if st.button("📋 Copy to Clipboard", use_container_width=True, key="copy_json_all"):
+                        if copy_to_clipboard(json_str):
+                            st.success("✅ JSON copied to clipboard!")
+                        else:
+                            st.info("💡 Clipboard not available. Use the download button instead.")
+                
+                with col2:
+                    st.download_button(
+                        label="📥 Download JSON",
+                        data=json_str,
+                        file_name=f"{st.session_state.get('keywords', 'search')}_results.json",
+                        mime="application/json",
+                        use_container_width=True
+                    )
             
             # Display images in grid
             st.subheader(f"📸 Images for '{st.session_state.get('keywords', keywords)}'")
