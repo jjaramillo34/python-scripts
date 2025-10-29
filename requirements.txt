@@ -1,0 +1,12 @@
+ddgs
+requests
+Pillow
+streamlit
+pyperclip
+re
+urllib.parse
+io
+time
+functools
+wraps
+urllib.parse
