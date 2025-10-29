@@ -394,25 +394,51 @@ def main():
             # Copy button right after the header
             col_copy, col_expander = st.columns([1, 4])
             with col_copy:
-                if st.button("📋 Copy All JSON", use_container_width=True, key="copy_json_header"):
-                    if copy_to_clipboard(json_str):
-                        st.success("✅ JSON copied to clipboard!")
-                    else:
-                        st.info("💡 Clipboard not available.")
+                copy_btn = st.button("📋 Copy All JSON", use_container_width=True, key="copy_json_header")
+                if copy_btn:
+                    # Ensure we're copying the actual JSON string
+                    try:
+                        # Verify json_str has content
+                        if not json_str or len(json_str) < 10:
+                            st.error("❌ No JSON data to copy. Please perform a search first.")
+                        else:
+                            pyperclip.copy(json_str)
+                            st.success("✅ JSON copied to clipboard!")
+                            # Also store in session state as backup
+                            st.session_state['copied_json'] = json_str
+                    except Exception as e:
+                        st.error(f"❌ Clipboard copy failed: {str(e)}")
+                        st.info("💡 Use the copyable text area below instead.")
+                        st.session_state['show_json_copy'] = True
             
             with col_expander:
                 with st.expander("📋 View JSON Results", expanded=False):
+                    # Always show code view
                     st.code(json_str, language="json")
+                    
+                    # Always show copyable text area as backup
+                    st.text_area(
+                        "📋 Copyable JSON (Select all: Ctrl+A / Cmd+A, then copy: Ctrl+C / Cmd+C):",
+                        value=json_str,
+                        height=200,
+                        key="json_copyable_textarea",
+                        help="This text area makes it easy to manually copy the JSON"
+                    )
                     
                     # Copy and Download buttons side by side
                     col1, col2 = st.columns(2)
                     
                     with col1:
                         if st.button("📋 Copy to Clipboard", use_container_width=True, key="copy_json_all"):
-                            if copy_to_clipboard(json_str):
-                                st.success("✅ JSON copied to clipboard!")
-                            else:
-                                st.info("💡 Clipboard not available. Use the download button instead.")
+                            try:
+                                if not json_str or len(json_str) < 10:
+                                    st.error("❌ No JSON data available.")
+                                else:
+                                    pyperclip.copy(json_str)
+                                    st.success("✅ JSON copied to clipboard!")
+                                    st.session_state['copied_json'] = json_str
+                            except Exception as e:
+                                st.warning(f"⚠️ Copy failed: {str(e)}. Use the text area above to copy manually.")
                     
                     with col2:
                         st.download_button(
