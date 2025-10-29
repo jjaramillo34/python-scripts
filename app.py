@@ -391,63 +391,30 @@ def main():
             json_output = {"images": results}
             json_str = json.dumps(json_output, indent=2)
             
-            # Copy button right after the header
-            col_copy, col_expander = st.columns([1, 4])
-            with col_copy:
-                copy_btn = st.button("📋 Copy All JSON", use_container_width=True, key="copy_json_header")
-                if copy_btn:
-                    # Ensure we're copying the actual JSON string
-                    try:
-                        # Verify json_str has content
-                        if not json_str or len(json_str) < 10:
-                            st.error("❌ No JSON data to copy. Please perform a search first.")
-                        else:
-                            pyperclip.copy(json_str)
-                            st.success("✅ JSON copied to clipboard!")
-                            # Also store in session state as backup
-                            st.session_state['copied_json'] = json_str
-                    except Exception as e:
-                        st.error(f"❌ Clipboard copy failed: {str(e)}")
-                        st.info("💡 Use the copyable text area below instead.")
-                        st.session_state['show_json_copy'] = True
+            # Copyable JSON text area - primary method for copying
+            st.markdown("### 📋 Copy JSON Results")
+            st.info("💡 **To copy:** Click in the text area below, press `Ctrl+A` (or `Cmd+A` on Mac) to select all, then `Ctrl+C` (or `Cmd+C` on Mac) to copy.")
+            json_text_area = st.text_area(
+                "JSON Results (Select all and copy):",
+                value=json_str,
+                height=300,
+                key="json_copyable_main",
+                help="Select all text (Ctrl+A / Cmd+A) then copy (Ctrl+C / Cmd+C) to copy the JSON to your clipboard"
+            )
             
-            with col_expander:
-                with st.expander("📋 View JSON Results", expanded=False):
-                    # Always show code view
-                    st.code(json_str, language="json")
-                    
-                    # Always show copyable text area as backup
-                    st.text_area(
-                        "📋 Copyable JSON (Select all: Ctrl+A / Cmd+A, then copy: Ctrl+C / Cmd+C):",
-                        value=json_str,
-                        height=200,
-                        key="json_copyable_textarea",
-                        help="This text area makes it easy to manually copy the JSON"
-                    )
-                    
-                    # Copy and Download buttons side by side
-                    col1, col2 = st.columns(2)
-                    
-                    with col1:
-                        if st.button("📋 Copy to Clipboard", use_container_width=True, key="copy_json_all"):
-                            try:
-                                if not json_str or len(json_str) < 10:
-                                    st.error("❌ No JSON data available.")
-                                else:
-                                    pyperclip.copy(json_str)
-                                    st.success("✅ JSON copied to clipboard!")
-                                    st.session_state['copied_json'] = json_str
-                            except Exception as e:
-                                st.warning(f"⚠️ Copy failed: {str(e)}. Use the text area above to copy manually.")
-                    
-                    with col2:
-                        st.download_button(
-                            label="📥 Download JSON",
-                            data=json_str,
-                            file_name=f"{st.session_state.get('keywords', 'search')}_results.json",
-                            mime="application/json",
-                            use_container_width=True
-                        )
+            # Download button
+            st.download_button(
+                label="📥 Download JSON File",
+                data=json_str,
+                file_name=f"{st.session_state.get('keywords', 'search')}_results.json",
+                mime="application/json",
+                use_container_width=True,
+                type="primary"
+            )
+            
+            # Optional: View formatted JSON in expander
+            with st.expander("📖 View Formatted JSON", expanded=False):
+                st.code(json_str, language="json")
             
             # Display images in grid
             st.subheader(f"📸 Images for '{st.session_state.get('keywords', keywords)}'")
