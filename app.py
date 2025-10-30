@@ -8,8 +8,22 @@ from PIL import Image
 from io import BytesIO
 import time
 from functools import wraps
-import pyperclip
 import re
+import platform
+import subprocess
+
+# Try importing clipboard libraries
+try:
+    import pyperclip
+    HAS_PYPERCLIP = True
+except ImportError:
+    HAS_PYPERCLIP = False
+
+try:
+    from tkinter import Tk
+    HAS_TKINTER = True
+except ImportError:
+    HAS_TKINTER = False
 
 st.set_page_config(
     page_title="Image Scraper",
@@ -203,14 +217,65 @@ def extract_restaurant_info(title: str, alt: str) -> tuple:
 
 def copy_to_clipboard(text: str) -> bool:
     """
-    Copy text to clipboard using pyperclip.
+    Copy text to clipboard using multiple fallback methods.
+    Tries: macOS pbcopy, tkinter, pyperclip, Windows clipboard.
     """
-    try:
-        pyperclip.copy(text)
-        return True
-    except Exception as e:
-        # Fallback: return False to use streamlit's display method
+    if not text:
         return False
+    
+    # Method 1: macOS pbcopy (most reliable on macOS)
+    if platform.system() == "Darwin":  # macOS
+        try:
+            process = subprocess.Popen(
+                ['pbcopy'],
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE
+            )
+            process.communicate(input=text.encode('utf-8'))
+            process.wait()
+            if process.returncode == 0:
+                return True
+        except Exception:
+            pass
+    
+    # Method 2: Tkinter (cross-platform, built-in)
+    if HAS_TKINTER:
+        try:
+            r = Tk()
+            r.withdraw()  # Hide the main window
+            r.clipboard_clear()
+            r.clipboard_append(text)
+            r.update()  # Now it stays on the clipboard after the window is closed
+            r.destroy()
+            return True
+        except Exception:
+            pass
+    
+    # Method 3: pyperclip (if available)
+    if HAS_PYPERCLIP:
+        try:
+            pyperclip.copy(text)
+            return True
+        except Exception:
+            pass
+    
+    # Method 4: Linux xclip
+    if platform.system() == "Linux":
+        try:
+            process = subprocess.Popen(
+                ['xclip', '-selection', 'clipboard'],
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE
+            )
+            process.communicate(input=text.encode('utf-8'))
+            if process.returncode == 0:
+                return True
+        except Exception:
+            pass
+    
+    return False
 
 def format_image_results(results: List[Dict]) -> List[Dict]:
     """Format DuckDuckGo image results to match the desired structure"""
@@ -391,26 +456,84 @@ def main():
             json_output = {"images": results}
             json_str = json.dumps(json_output, indent=2)
             
-            # Copyable JSON text area - primary method for copying
+            # Copyable JSON text area with copy button
             st.markdown("### 📋 Copy JSON Results")
-            st.info("💡 **To copy:** Click in the text area below, press `Ctrl+A` (or `Cmd+A` on Mac) to select all, then `Ctrl+C` (or `Cmd+C` on Mac) to copy.")
-            json_text_area = st.text_area(
-                "JSON Results (Select all and copy):",
-                value=json_str,
-                height=300,
-                key="json_copyable_main",
-                help="Select all text (Ctrl+A / Cmd+A) then copy (Ctrl+C / Cmd+C) to copy the JSON to your clipboard"
-            )
             
-            # Download button
-            st.download_button(
-                label="📥 Download JSON File",
-                data=json_str,
-                file_name=f"{st.session_state.get('keywords', 'search')}_results.json",
-                mime="application/json",
-                use_container_width=True,
-                type="primary"
-            )
+            # Copy button using JavaScript (works in browser)
+            col_copy, col_info = st.columns([1, 4])
+            with col_copy:
+                # JavaScript-based copy button (works in browser)
+                # Properly escape JSON for embedding in JavaScript using json.dumps
+                json_for_js = json.dumps(json_str)
+                copy_button_html = f"""
+                <div id="copy-container">
+                    <button onclick="copyToClipboard()" style="
+                        width: 100%;
+                        padding: 0.5rem;
+                        background-color: #FF4B4B;
+                        color: white;
+                        border: none;
+                        border-radius: 0.25rem;
+                        cursor: pointer;
+                        font-size: 1rem;
+                        font-weight: 600;
+                    " onmouseover="this.style.backgroundColor='#FF2B2B'" onmouseout="this.style.backgroundColor='#FF4B4B'">
+                        📋 Copy JSON
+                    </button>
+                    <script>
+                    const jsonData = {json_for_js};
+                    function copyToClipboard() {{
+                        if (navigator.clipboard && navigator.clipboard.writeText) {{
+                            navigator.clipboard.writeText(jsonData).then(function() {{
+                                alert('✅ JSON copied to clipboard!');
+                            }}, function(err) {{
+                                fallbackCopy(jsonData);
+                            }});
+                        }} else {{
+                            fallbackCopy(jsonData);
+                        }}
+                    }}
+                    function fallbackCopy(text) {{
+                        const textarea = document.createElement('textarea');
+                        textarea.value = text;
+                        textarea.style.position = 'fixed';
+                        textarea.style.opacity = '0';
+                        document.body.appendChild(textarea);
+                        textarea.select();
+                        try {{
+                            document.execCommand('copy');
+                            alert('✅ JSON copied to clipboard!');
+                        }} catch (err) {{
+                            alert('⚠️ Copy failed. Please use the text area below to copy manually.');
+                        }}
+                        document.body.removeChild(textarea);
+                    }}
+                    </script>
+                </div>
+                """
+                st.components.v1.html(copy_button_html, height=45)
+            
+            with col_info:
+                st.info("💡 Click the **Copy JSON** button above to copy the results.")
+            
+            # Server-side copy button (fallback)
+            col_btn1, col_btn2 = st.columns(2)
+            with col_btn1:
+                if st.button("📋 Copy via Server (Alternative)", use_container_width=True, key="copy_json_server"):
+                    if copy_to_clipboard(json_str):
+                        st.success("✅ JSON copied to clipboard!")
+                    else:
+                        st.warning("⚠️ Server-side copy failed. Use the 'Copy JSON' button above or the text area.")
+            
+            with col_btn2:
+                st.download_button(
+                    label="📥 Download JSON File",
+                    data=json_str,
+                    file_name=f"{st.session_state.get('keywords', 'search')}_results.json",
+                    mime="application/json",
+                    use_container_width=True,
+                    type="primary"
+                )
             
             # Optional: View formatted JSON in expander
             with st.expander("📖 View Formatted JSON", expanded=False):
