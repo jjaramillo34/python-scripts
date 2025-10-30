@@ -12,6 +12,10 @@ import re
 import platform
 import subprocess
 
+# Streamlit extras for enhanced UI
+from streamlit_extras.colored_header import colored_header
+from streamlit_extras.metric_cards import style_metric_cards
+
 # Try importing clipboard libraries
 try:
     import pyperclip
@@ -152,11 +156,11 @@ def display_image_safe(image_url: str, caption: str = ""):
                     # Try to read the image
                     img_data = response.content
                     img = Image.open(BytesIO(img_data))
-                    st.image(img, use_container_width=True, caption=caption)
+                    st.image(img, width='stretch', caption=caption)
                     return True
                 else:
                     # If direct download fails, try with st.image (it might handle it)
-                    st.image(image_url, use_container_width=True, caption=caption)
+                    st.image(image_url, width='stretch', caption=caption)
                     return True
             except Exception as e:
                 # If all else fails, show a clickable link
@@ -165,7 +169,7 @@ def display_image_safe(image_url: str, caption: str = ""):
                 return False
         else:
             # For regular images, use standard display
-            st.image(image_url, use_container_width=True, caption=caption)
+            st.image(image_url, width='stretch', caption=caption)
             return True
     except Exception as e:
         # Fallback: show as link
@@ -314,14 +318,22 @@ def format_image_results(results: List[Dict]) -> List[Dict]:
     return formatted_results
 
 def main():
-    st.title("🔍 Image Scraper with DuckDuckGo")
-    st.markdown("---")
+    # Enhanced header with colored_header
+    colored_header(
+        label="🔍 Image Scraper with DuckDuckGo",
+        description="Search and scrape images using DuckDuckGo with advanced filtering options",
+        color_name="blue-70"
+    )
     
     # Sidebar for search controls
     with st.sidebar:
-        st.header("Search Settings")
-        keywords = st.text_input("Search Keywords", value="butterfly", help="Enter what you want to search")
-        max_results = st.number_input("Max Results", min_value=1, max_value=100, value=10, step=1)
+        colored_header(
+            label="⚙️ Search Settings",
+            description="Configure your image search",
+            color_name="violet-70"
+        )
+        keywords = st.text_input("🔑 Search Keywords", value="butterfly", help="Enter what you want to search")
+        max_results = st.number_input("📊 Max Results", min_value=1, max_value=100, value=10, step=1)
         
         with st.expander("🔧 Filter Options", expanded=False):
             region = st.selectbox("Region", ["wt-wt", "us-en", "uk-en", "es-es", "fr-fr"], index=1)  # Default to us-en
@@ -352,15 +364,23 @@ def main():
             license_filter = st.selectbox("License", ["None", "Public", "Share", "ShareCommercially", "Modify", "ModifyCommercially"])
         
         st.markdown("---")
-        st.subheader("Validation")
+        colored_header(
+            label="🔍 Validation",
+            description="",
+            color_name="orange-70"
+        )
         validate_images = st.checkbox("✅ Validate Images", value=True, help="Filter out broken/invalid image URLs (recommended)")
         
         st.markdown("---")
-        st.subheader("Rate Limiting")
+        colored_header(
+            label="⚡ Rate Limiting",
+            description="",
+            color_name="red-70"
+        )
         st.info("💡 If you get rate limit errors, wait a few minutes or reduce max results.")
-        enable_delay = st.checkbox("Add delay between searches", value=True, help="Helps prevent rate limiting")
+        enable_delay = st.checkbox("⏱️ Add delay between searches", value=True, help="Helps prevent rate limiting")
         
-        search_button = st.button("🔍 Search Images", type="primary", use_container_width=True)
+        search_button = st.button("🔍 Search Images", type="primary", width='stretch')
     
     # Main content area
     if search_button or st.session_state.get('results'):
@@ -380,6 +400,7 @@ def main():
                         "type_image": type_filter if type_filter != "None" else None,
                         "layout": layout_filter if layout_filter != "None" else None,
                         "license_image": license_filter if license_filter != "None" else None,
+                        "max_results": max_results,
                     }
                     
                     # Add delay before search if enabled
@@ -463,8 +484,9 @@ def main():
             col_copy, col_info = st.columns([1, 4])
             with col_copy:
                 # JavaScript-based copy button (works in browser)
-                # Properly escape JSON for embedding in JavaScript using json.dumps
-                json_for_js = json.dumps(json_str)
+                # json_str is already a JSON string - use json.dumps() to escape it properly for JavaScript
+                # Then strip outer quotes since we embed it directly in a JavaScript string literal
+                json_for_js = json.dumps(json_str)[1:-1]  # Escape properly, then remove outer JSON quotes
                 copy_button_html = f"""
                 <div id="copy-container">
                     <button onclick="copyToClipboard()" style="
@@ -481,7 +503,8 @@ def main():
                         📋 Copy JSON
                     </button>
                     <script>
-                    const jsonData = {json_for_js};
+                    // json_for_js is the escaped JSON string, use it directly
+                    const jsonData = "{json_for_js}";
                     function copyToClipboard() {{
                         if (navigator.clipboard && navigator.clipboard.writeText) {{
                             navigator.clipboard.writeText(jsonData).then(function() {{
@@ -519,7 +542,7 @@ def main():
             # Server-side copy button (fallback)
             col_btn1, col_btn2 = st.columns(2)
             with col_btn1:
-                if st.button("📋 Copy via Server (Alternative)", use_container_width=True, key="copy_json_server"):
+                if st.button("📋 Copy via Server (Alternative)", width='stretch', key="copy_json_server"):
                     if copy_to_clipboard(json_str):
                         st.success("✅ JSON copied to clipboard!")
                     else:
@@ -531,7 +554,7 @@ def main():
                     data=json_str,
                     file_name=f"{st.session_state.get('keywords', 'search')}_results.json",
                     mime="application/json",
-                    use_container_width=True,
+                    width='stretch',
                     type="primary"
                 )
             
@@ -539,11 +562,15 @@ def main():
             with st.expander("📖 View Formatted JSON", expanded=False):
                 st.code(json_str, language="json")
             
-            # Display images in grid
-            st.subheader(f"📸 Images for '{st.session_state.get('keywords', keywords)}'")
+            # Display images in grid with colored header
+            colored_header(
+                label=f"📸 Images for '{st.session_state.get('keywords', keywords)}'",
+                description=f"Found {len(results)} image(s)",
+                color_name="green-70"
+            )
             
-            # Create columns for grid layout
-            cols_per_row = 3
+            # Create columns for grid layout - 5 images per row
+            cols_per_row = 5
             num_cols = min(cols_per_row, len(results))
             
             for i in range(0, len(results), cols_per_row):
@@ -579,7 +606,7 @@ def main():
                                         # Copy button
                                         if restaurant_name and full_address:
                                             copy_text = f"{restaurant_name} {full_address}"
-                                            if st.button("📋", key=f"copy_{i}_{j}", help="Copy restaurant name and address", use_container_width=True):
+                                            if st.button("📋", key=f"copy_{i}_{j}", help="Copy restaurant name and address", width='stretch'):
                                                 # Try to copy to clipboard
                                                 if copy_to_clipboard(copy_text):
                                                     st.session_state[f'copied_{i}_{j}'] = True
@@ -591,16 +618,26 @@ def main():
                                     if st.session_state.get(f'copied_{i}_{j}', False):
                                         st.caption("✅ Copied!")
                                     
-                                    # Display metadata
+                                    # Display metadata with badges
                                     with st.expander(f"ℹ️ Details - Image #{result.get('position', i+j+1)}"):
                                         st.write(f"**Title:** {result.get('title', 'N/A')}")
                                         st.write(f"**Image URL:** [{result.get('url', 'N/A')}]({result.get('url', '#')})")
-                                        st.write(f"**Source:** {result.get('source', 'N/A')}")
-                                        st.write(f"**Website:** [{result.get('website', {}).get('name', 'N/A')}]({result.get('website', {}).get('url', '#')})")
+                                        
+                                        # Use markdown badges for metadata
+                                        source = result.get('source', 'N/A')
+                                        st.markdown(f"**Source:** `{source}`")
+                                        
+                                        website_name = result.get('website', {}).get('name', 'N/A')
+                                        website_url = result.get('website', {}).get('url', '#')
+                                        st.write(f"**Website:** [{website_name}]({website_url})")
+                                        
                                         width = result.get('dimensions', {}).get('width', 0)
                                         height = result.get('dimensions', {}).get('height', 0)
-                                        st.write(f"**Dimensions:** {width} x {height} px")
-                                        st.write(f"**Position:** {result.get('position', i+j+1)}")
+                                        if width and height:
+                                            st.markdown(f"**Dimensions:** 📐 `{width} x {height} px`")
+                                        
+                                        position = result.get('position', i+j+1)
+                                        st.markdown(f"**Position:** `#{position}`")
                                         
                                         # Copy JSON for this image
                                         image_json = json.dumps(result, indent=2)
@@ -612,35 +649,54 @@ def main():
                                 with st.expander("Show raw data"):
                                     st.json(result)
             
-            # Results summary
+            # Results summary with styled metrics
             st.markdown("---")
             col1, col2, col3 = st.columns(3)
             with col1:
-                st.metric("Total Images", len(results))
+                st.metric("📊 Total Images", len(results))
             with col2:
                 avg_width = sum(r.get("dimensions", {}).get("width", 0) for r in results) / len(results) if results else 0
-                st.metric("Avg Width", f"{int(avg_width)}px")
+                st.metric("📐 Avg Width", f"{int(avg_width)}px")
             with col3:
                 avg_height = sum(r.get("dimensions", {}).get("height", 0) for r in results) / len(results) if results else 0
-                st.metric("Avg Height", f"{int(avg_height)}px")
+                st.metric("📏 Avg Height", f"{int(avg_height)}px")
+            
+            # Style the metric cards
+            style_metric_cards(
+                background_color="#f0f2f6",
+                border_left_color="#1f77b4",
+                border_color="#d1d4dc",
+                box_shadow="2px 2px 5px rgba(0,0,0,0.1)"
+            )
     
     else:
-        # Welcome message
+        # Welcome message with enhanced styling
         st.info("👈 Use the sidebar to configure your search and click 'Search Images' to get started!")
         
-        st.markdown("""
-        ### Features:
-        - 🔍 Search images using DuckDuckGo (new API format)
-        - 🎨 Filter by color, size, type, layout, and license
-        - ⏰ Time-based filtering (day, week, month, year)
-        - 📄 Pagination support (multiple pages)
-        - 🔧 Backend selection (auto, api, html)
-        - 🌍 Choose region
-        - ✅ Image validation (filter broken URLs)
-        - 📥 Download results as JSON
-        - 📸 View images in a beautiful grid layout
-        - 🛡️ Rate limiting protection
-        """)
+        # Features in an accordion format
+        with st.expander("🚀 Features & How to Use", expanded=False):
+            st.markdown("""
+            ### ✨ Advanced Search Capabilities:
+            - 🔍 Search images using DuckDuckGo (new API format)
+            - 🎨 Filter by color, size, type, layout, and license
+            - ⏰ Time-based filtering (day, week, month, year)
+            - 📄 Pagination support (multiple pages)
+            - 🔧 Backend selection (auto, api, html)
+            - 🌍 Choose region
+            
+            ### 🛡️ Quality & Protection:
+            - ✅ Image validation (filter broken URLs)
+            - 🛡️ Rate limiting protection
+            - 📥 Download results as JSON
+            - 📸 View images in a beautiful grid layout
+            
+            ### 📖 How to Use:
+            1. Enter your search keywords in the sidebar
+            2. Configure search filters (optional)
+            3. Set the maximum number of results
+            4. Click "Search Images" button
+            5. Browse results and copy/download JSON data
+            """)
 
 if __name__ == "__main__":
     main()

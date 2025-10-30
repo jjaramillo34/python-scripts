@@ -3,3 +3,4 @@ requests
 Pillow
 streamlit
 pyperclip
+streamlit-extras
