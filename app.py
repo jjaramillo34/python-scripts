@@ -508,7 +508,7 @@ def main():
                     function copyToClipboard() {{
                         if (navigator.clipboard && navigator.clipboard.writeText) {{
                             navigator.clipboard.writeText(jsonData).then(function() {{
-                                alert('✅ JSON copied to clipboard!');
+                                // Copy successful - no alert
                             }}, function(err) {{
                                 fallbackCopy(jsonData);
                             }});
@@ -525,9 +525,9 @@ def main():
                         textarea.select();
                         try {{
                             document.execCommand('copy');
-                            alert('✅ JSON copied to clipboard!');
+                            // Copy successful - no alert
                         }} catch (err) {{
-                            alert('⚠️ Copy failed. Please use the text area below to copy manually.');
+                            // Copy failed - silently fail
                         }}
                         document.body.removeChild(textarea);
                     }}
@@ -641,7 +641,7 @@ def main():
                                             function copyImageUrl{btn_id}() {{
                                                 if (navigator.clipboard && navigator.clipboard.writeText) {{
                                                     navigator.clipboard.writeText(imageUrl{btn_id}).then(function() {{
-                                                        alert('✅ Image URL copied to clipboard!');
+                                                        // Copy successful - no alert
                                                     }}, function(err) {{
                                                         fallbackCopyUrl{btn_id}(imageUrl{btn_id});
                                                     }});
@@ -658,9 +658,9 @@ def main():
                                                 textarea.select();
                                                 try {{
                                                     document.execCommand('copy');
-                                                    alert('✅ Image URL copied to clipboard!');
+                                                    // Copy successful - no alert
                                                 }} catch (err) {{
-                                                    alert('⚠️ Copy failed. URL: ' + text);
+                                                    // Copy failed - silently fail
                                                 }}
                                                 document.body.removeChild(textarea);
                                             }}
