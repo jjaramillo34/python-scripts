@@ -539,14 +539,10 @@ def main():
             with col_info:
                 st.info("💡 Click the **Copy JSON** button above to copy the results.")
             
-            # Server-side copy button (fallback)
+            # Note: Server-side copy doesn't work in Streamlit Cloud, so we only use JavaScript-based copy
             col_btn1, col_btn2 = st.columns(2)
             with col_btn1:
-                if st.button("📋 Copy via Server (Alternative)", width='stretch', key="copy_json_server"):
-                    if copy_to_clipboard(json_str):
-                        st.success("✅ JSON copied to clipboard!")
-                    else:
-                        st.warning("⚠️ Server-side copy failed. Use the 'Copy JSON' button above or the text area.")
+                st.info("💡 Use the **Copy JSON** button above for cloud compatibility")
             
             with col_btn2:
                 st.download_button(
@@ -618,19 +614,60 @@ def main():
                                     if st.session_state.get(f'copied_{i}_{j}', False):
                                         st.caption("✅ Copied!")
                                     
-                                    # Copy Image URL button
+                                    # Copy Image URL button (JavaScript-based for cloud compatibility)
                                     image_url_to_copy = result.get("url") or result.get("thumbnail", "")
                                     if image_url_to_copy:
-                                        if st.button("📋 Copy as Main Image", key=f"copy_url_{i}_{j}", width='stretch', help="Copy image URL to clipboard"):
-                                            if copy_to_clipboard(image_url_to_copy):
-                                                st.session_state[f'copied_url_{i}_{j}'] = True
-                                                st.success("✅ Image URL copied!")
-                                            else:
-                                                st.warning("⚠️ Failed to copy. URL: " + image_url_to_copy)
-                                        
-                                        # Show success message if URL was copied
-                                        if st.session_state.get(f'copied_url_{i}_{j}', False):
-                                            st.caption("✅ Image URL copied!")
+                                        # Escape URL for JavaScript embedding
+                                        url_for_js = json.dumps(image_url_to_copy)[1:-1]  # Escape and strip outer quotes
+                                        # Create unique IDs for this button
+                                        btn_id = f"img{i}x{j}"
+                                        copy_url_html = f"""
+                                        <div id="copy-url-container-{btn_id}">
+                                            <button onclick="copyImageUrl{btn_id}()" style="
+                                                width: 100%;
+                                                padding: 0.5rem;
+                                                background-color: #1f77b4;
+                                                color: white;
+                                                border: none;
+                                                border-radius: 0.25rem;
+                                                cursor: pointer;
+                                                font-size: 0.9rem;
+                                                font-weight: 500;
+                                            " onmouseover="this.style.backgroundColor='#1a66a0'" onmouseout="this.style.backgroundColor='#1f77b4'">
+                                                📋 Copy as Main Image
+                                            </button>
+                                            <script>
+                                            const imageUrl{btn_id} = "{url_for_js}";
+                                            function copyImageUrl{btn_id}() {{
+                                                if (navigator.clipboard && navigator.clipboard.writeText) {{
+                                                    navigator.clipboard.writeText(imageUrl{btn_id}).then(function() {{
+                                                        alert('✅ Image URL copied to clipboard!');
+                                                    }}, function(err) {{
+                                                        fallbackCopyUrl{btn_id}(imageUrl{btn_id});
+                                                    }});
+                                                }} else {{
+                                                    fallbackCopyUrl{btn_id}(imageUrl{btn_id});
+                                                }}
+                                            }}
+                                            function fallbackCopyUrl{btn_id}(text) {{
+                                                const textarea = document.createElement('textarea');
+                                                textarea.value = text;
+                                                textarea.style.position = 'fixed';
+                                                textarea.style.opacity = '0';
+                                                document.body.appendChild(textarea);
+                                                textarea.select();
+                                                try {{
+                                                    document.execCommand('copy');
+                                                    alert('✅ Image URL copied to clipboard!');
+                                                }} catch (err) {{
+                                                    alert('⚠️ Copy failed. URL: ' + text);
+                                                }}
+                                                document.body.removeChild(textarea);
+                                            }}
+                                            </script>
+                                        </div>
+                                        """
+                                        st.components.v1.html(copy_url_html, height=40)
                                     
                                     # Display metadata with badges
                                     with st.expander(f"ℹ️ Details - Image #{result.get('position', i+j+1)}"):
