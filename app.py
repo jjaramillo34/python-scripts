@@ -333,7 +333,7 @@ def main():
             color_name="violet-70"
         )
         keywords = st.text_input("🔑 Search Keywords", value="butterfly", help="Enter what you want to search")
-        max_results = st.number_input("📊 Max Results", min_value=1, max_value=100, value=10, step=1)
+        max_results = st.number_input("📊 Max Results", min_value=1, max_value=100, value=11, step=1)
         
         with st.expander("🔧 Filter Options", expanded=False):
             region = st.selectbox("Region", ["wt-wt", "us-en", "uk-en", "es-es", "fr-fr"], index=1)  # Default to us-en
@@ -617,6 +617,20 @@ def main():
                                     # Show success message if copied
                                     if st.session_state.get(f'copied_{i}_{j}', False):
                                         st.caption("✅ Copied!")
+                                    
+                                    # Copy Image URL button
+                                    image_url_to_copy = result.get("url") or result.get("thumbnail", "")
+                                    if image_url_to_copy:
+                                        if st.button("📋 Copy as Main Image", key=f"copy_url_{i}_{j}", width='stretch', help="Copy image URL to clipboard"):
+                                            if copy_to_clipboard(image_url_to_copy):
+                                                st.session_state[f'copied_url_{i}_{j}'] = True
+                                                st.success("✅ Image URL copied!")
+                                            else:
+                                                st.warning("⚠️ Failed to copy. URL: " + image_url_to_copy)
+                                        
+                                        # Show success message if URL was copied
+                                        if st.session_state.get(f'copied_url_{i}_{j}', False):
+                                            st.caption("✅ Image URL copied!")
                                     
                                     # Display metadata with badges
                                     with st.expander(f"ℹ️ Details - Image #{result.get('position', i+j+1)}"):
