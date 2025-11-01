@@ -2,9 +2,10 @@
 FastAPI application for DuckDuckGo Image Search API
 Deploy to: Heroku, Railway, Render, Fly.io, or any Python hosting service
 """
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, HTMLResponse
+from fastapi.templating import Jinja2Templates
 from ddgs import DDGS
 from typing import List, Dict, Optional
 from urllib.parse import urlparse
@@ -51,6 +52,9 @@ app = FastAPI(
     redoc_url="/redoc",
     openapi_url="/openapi.json"
 )
+
+# Setup Jinja2 templates
+templates = Jinja2Templates(directory="templates")
 
 # Enable CORS for frontend access
 app.add_middleware(
@@ -181,317 +185,17 @@ def format_image_results(results: List[Dict]) -> List[Dict]:
     return formatted_results
 
 @app.get("/", response_class=HTMLResponse, tags=["Info"])
-async def root():
+async def root(request: Request):
     """
     API Homepage - Welcome page with API information and documentation links
     """
-    html_content = """
-    <!DOCTYPE html>
-    <html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>DuckDuckGo Image Search API</title>
-        <style>
-            * {
-                margin: 0;
-                padding: 0;
-                box-sizing: border-box;
-            }
-            body {
-                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-                line-height: 1.6;
-                color: #333;
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                min-height: 100vh;
-                padding: 20px;
-            }
-            .container {
-                max-width: 1200px;
-                margin: 0 auto;
-                background: white;
-                border-radius: 12px;
-                box-shadow: 0 10px 40px rgba(0,0,0,0.2);
-                overflow: hidden;
-            }
-            .header {
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                color: white;
-                padding: 60px 40px;
-                text-align: center;
-            }
-            .header h1 {
-                font-size: 3em;
-                margin-bottom: 10px;
-                font-weight: 700;
-            }
-            .header p {
-                font-size: 1.3em;
-                opacity: 0.95;
-            }
-            .content {
-                padding: 40px;
-            }
-            .section {
-                margin-bottom: 40px;
-            }
-            .section h2 {
-                color: #667eea;
-                font-size: 2em;
-                margin-bottom: 20px;
-                border-bottom: 3px solid #667eea;
-                padding-bottom: 10px;
-            }
-            .section h3 {
-                color: #764ba2;
-                font-size: 1.5em;
-                margin: 30px 0 15px 0;
-            }
-            .features {
-                display: grid;
-                grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-                gap: 20px;
-                margin: 30px 0;
-            }
-            .feature-card {
-                background: #f8f9fa;
-                padding: 25px;
-                border-radius: 8px;
-                border-left: 4px solid #667eea;
-                transition: transform 0.2s;
-            }
-            .feature-card:hover {
-                transform: translateY(-5px);
-                box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-            }
-            .feature-card h4 {
-                color: #667eea;
-                margin-bottom: 10px;
-                font-size: 1.2em;
-            }
-            .button-group {
-                display: flex;
-                gap: 15px;
-                flex-wrap: wrap;
-                margin: 30px 0;
-            }
-            .btn {
-                display: inline-block;
-                padding: 15px 30px;
-                background: #667eea;
-                color: white;
-                text-decoration: none;
-                border-radius: 6px;
-                font-weight: 600;
-                transition: background 0.3s, transform 0.2s;
-                border: none;
-                cursor: pointer;
-                font-size: 1em;
-            }
-            .btn:hover {
-                background: #5568d3;
-                transform: translateY(-2px);
-                box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
-            }
-            .btn-secondary {
-                background: #764ba2;
-            }
-            .btn-secondary:hover {
-                background: #633a8a;
-            }
-            .code-block {
-                background: #2d3748;
-                color: #e2e8f0;
-                padding: 20px;
-                border-radius: 6px;
-                overflow-x: auto;
-                margin: 15px 0;
-                font-family: 'Courier New', monospace;
-                font-size: 0.9em;
-            }
-            .code-block code {
-                color: #68d391;
-            }
-            .endpoint {
-                background: #f8f9fa;
-                padding: 15px;
-                border-radius: 6px;
-                margin: 10px 0;
-                border-left: 4px solid #764ba2;
-            }
-            .endpoint-method {
-                display: inline-block;
-                padding: 5px 10px;
-                border-radius: 4px;
-                font-weight: 600;
-                font-size: 0.9em;
-                margin-right: 10px;
-            }
-            .method-get {
-                background: #48bb78;
-                color: white;
-            }
-            .method-post {
-                background: #4299e1;
-                color: white;
-            }
-            .badge {
-                display: inline-block;
-                padding: 5px 10px;
-                background: #667eea;
-                color: white;
-                border-radius: 12px;
-                font-size: 0.85em;
-                margin: 5px;
-            }
-            .footer {
-                background: #f8f9fa;
-                padding: 30px;
-                text-align: center;
-                color: #666;
-                border-top: 1px solid #e2e8f0;
-            }
-            @media (max-width: 768px) {
-                .header h1 {
-                    font-size: 2em;
-                }
-                .button-group {
-                    flex-direction: column;
-                }
-                .btn {
-                    width: 100%;
-                    text-align: center;
-                }
-            }
-        </style>
-    </head>
-    <body>
-        <div class="container">
-            <div class="header">
-                <h1>🔍 DuckDuckGo Image Search API</h1>
-                <p>A powerful REST API for searching and scraping images using DuckDuckGo</p>
-                <div style="margin-top: 20px;">
-                    <span class="badge">Version 1.0.0</span>
-                    <span class="badge">FastAPI</span>
-                    <span class="badge">OpenAPI 3.0</span>
-                </div>
-            </div>
-            
-            <div class="content">
-                <div class="section">
-                    <h2>🚀 Quick Start</h2>
-                    <div class="button-group">
-                        <a href="/docs" class="btn">📚 Interactive Docs (Swagger)</a>
-                        <a href="/redoc" class="btn btn-secondary">📖 Alternative Docs (ReDoc)</a>
-                        <a href="/openapi.json" class="btn btn-secondary">📄 OpenAPI Schema</a>
-                    </div>
-                </div>
-                
-                <div class="section">
-                    <h2>✨ Features</h2>
-                    <div class="features">
-                        <div class="feature-card">
-                            <h4>🔎 Search Images</h4>
-                            <p>Search for images by keywords with advanced filtering options</p>
-                        </div>
-                        <div class="feature-card">
-                            <h4>🎨 Advanced Filtering</h4>
-                            <p>Filter by size, color, type, layout, and license</p>
-                        </div>
-                        <div class="feature-card">
-                            <h4>🌍 Region Support</h4>
-                            <p>Search in different regions worldwide</p>
-                        </div>
-                        <div class="feature-card">
-                            <h4>✅ Image Validation</h4>
-                            <p>Optional URL validation for reliable results</p>
-                        </div>
-                        <div class="feature-card">
-                            <h4>📄 Pagination</h4>
-                            <p>Navigate through multiple pages of results</p>
-                        </div>
-                        <div class="feature-card">
-                            <h4>🚀 High Performance</h4>
-                            <p>Built with FastAPI for speed and reliability</p>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="section">
-                    <h2>📡 API Endpoints</h2>
-                    <div class="endpoint">
-                        <span class="endpoint-method method-get">GET</span>
-                        <strong>/api/search</strong>
-                        <p style="margin-top: 10px; color: #666;">Search images with query parameters</p>
-                    </div>
-                    <div class="endpoint">
-                        <span class="endpoint-method method-post">POST</span>
-                        <strong>/api/search</strong>
-                        <p style="margin-top: 10px; color: #666;">Search images with JSON request body</p>
-                    </div>
-                    <div class="endpoint">
-                        <span class="endpoint-method method-get">GET</span>
-                        <strong>/health</strong>
-                        <p style="margin-top: 10px; color: #666;">Health check endpoint</p>
-                    </div>
-                </div>
-                
-                <div class="section">
-                    <h2>💻 Example Usage</h2>
-                    <h3>GET Request</h3>
-                    <div class="code-block">
-                        <code>curl "http://localhost:8000/api/search?query=butterfly&max_results=5"</code>
-                    </div>
-                    
-                    <h3>POST Request</h3>
-                    <div class="code-block">
-                        <code>curl -X POST "http://localhost:8000/api/search" \\<br>
-  -H "Content-Type: application/json" \\<br>
-  -d '{"query": "butterfly", "max_results": 5, "region": "us-en"}'</code>
-                    </div>
-                    
-                    <h3>JavaScript Fetch</h3>
-                    <div class="code-block">
-                        <code>fetch('http://localhost:8000/api/search?query=butterfly&max_results=5')<br>
-  .then(response => response.json())<br>
-  .then(data => console.log(data));</code>
-                    </div>
-                </div>
-                
-                <div class="section">
-                    <h2>📋 Response Format</h2>
-                    <div class="code-block">
-                        <code>{<br>
-  "images": [<br>
-    {<br>
-      "url": "https://example.com/image.jpg",<br>
-      "title": "Image Title",<br>
-      "thumbnail": "https://example.com/thumb.jpg",<br>
-      "dimensions": {<br>
-        "width": 1920,<br>
-        "height": 1080<br>
-      },<br>
-      "source": "DuckDuckGo Search Images",<br>
-      "position": 1<br>
-    }<br>
-  ],<br>
-  "count": 1,<br>
-  "query": "butterfly",<br>
-  "max_results": 5<br>
-}</code>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="footer">
-                <p>Built with ❤️ using FastAPI | <a href="/docs" style="color: #667eea;">View API Documentation</a></p>
-                <p style="margin-top: 10px; font-size: 0.9em;">For API information in JSON format, visit <a href="/api/info" style="color: #667eea;">/api/info</a></p>
-            </div>
-        </div>
-    </body>
-    </html>
-    """
-    return HTMLResponse(content=html_content)
+    # Get base URL from request
+    base_url = str(request.base_url).rstrip('/')
+    
+    return templates.TemplateResponse("index.html", {
+        "request": request,
+        "base_url": base_url
+    })
 
 @app.get("/api/info", tags=["Info"])
 async def api_info():

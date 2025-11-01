@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DuckDuckGo Image Search API</title>
+    
+    <!-- Bootstrap 5.3 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <!-- Custom Styles -->
+    <style>
+        :root {
+            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --secondary-gradient: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            --success-gradient: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .hero-section {
+            background: var(--primary-gradient);
+            color: white;
+            padding: 80px 0;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .hero-section::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+            animation: pulse 15s ease-in-out infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 0.5; }
+            50% { transform: scale(1.1); opacity: 0.8; }
+        }
+        
+        .hero-content {
+            position: relative;
+            z-index: 1;
+        }
+        
+        .hero-title {
+            font-size: 3.5rem;
+            font-weight: 800;
+            margin-bottom: 1rem;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+        
+        .hero-subtitle {
+            font-size: 1.3rem;
+            opacity: 0.95;
+            margin-bottom: 2rem;
+        }
+        
+        .feature-card {
+            background: white;
+            border-radius: 16px;
+            padding: 2rem;
+            height: 100%;
+            transition: all 0.3s ease;
+            border: 1px solid #e9ecef;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.07);
+        }
+        
+        .feature-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 12px 24px rgba(0,0,0,0.15);
+            border-color: #667eea;
+        }
+        
+        .feature-icon {
+            font-size: 3rem;
+            background: var(--primary-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 1rem;
+        }
+        
+        .btn-primary-custom {
+            background: var(--primary-gradient);
+            border: none;
+            padding: 12px 30px;
+            font-weight: 600;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary-custom:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn-secondary-custom {
+            background: white;
+            color: #667eea;
+            border: 2px solid #667eea;
+            padding: 12px 30px;
+            font-weight: 600;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-secondary-custom:hover {
+            background: #667eea;
+            color: white;
+            transform: translateY(-2px);
+        }
+        
+        .code-snippet {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 1.5rem;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            overflow-x: auto;
+            border-left: 4px solid #667eea;
+        }
+        
+        .code-snippet code {
+            color: #9cdcfe;
+        }
+        
+        .code-snippet .keyword {
+            color: #569cd6;
+        }
+        
+        .code-snippet .string {
+            color: #ce9178;
+        }
+        
+        .endpoint-card {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            border-left: 4px solid;
+            transition: all 0.3s ease;
+        }
+        
+        .endpoint-card:hover {
+            box-shadow: 0 6px 12px rgba(0,0,0,0.1);
+            transform: translateX(5px);
+        }
+        
+        .endpoint-get {
+            border-left-color: #28a745;
+        }
+        
+        .endpoint-post {
+            border-left-color: #007bff;
+        }
+        
+        .method-badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 6px;
+            font-weight: 700;
+            font-size: 0.85rem;
+            margin-right: 1rem;
+        }
+        
+        .method-get {
+            background: #28a745;
+            color: white;
+        }
+        
+        .method-post {
+            background: #007bff;
+            color: white;
+        }
+        
+        .section-title {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 3rem;
+            text-align: center;
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+        
+        .content-section {
+            background: white;
+            padding: 60px 0;
+            margin-top: -50px;
+            border-radius: 30px 30px 0 0;
+            position: relative;
+            z-index: 10;
+        }
+        
+        .badge-custom {
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            margin: 0.25rem;
+        }
+        
+        .footer-custom {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 2rem 0;
+            margin-top: 60px;
+        }
+        
+        .stats-box {
+            background: var(--primary-gradient);
+            color: white;
+            border-radius: 12px;
+            padding: 2rem;
+            text-align: center;
+            margin: 1rem 0;
+        }
+        
+        .stats-number {
+            font-size: 2.5rem;
+            font-weight: 800;
+            margin-bottom: 0.5rem;
+        }
+        
+        .stats-label {
+            font-size: 1rem;
+            opacity: 0.9;
+        }
+    </style>
+</head>
+<body>
+    <!-- Hero Section -->
+    <section class="hero-section">
+        <div class="container">
+            <div class="hero-content text-center">
+                <h1 class="hero-title">
+                    <i class="bi bi-search"></i> DuckDuckGo Image Search API
+                </h1>
+                <p class="hero-subtitle">
+                    A powerful REST API for searching and scraping images with advanced filtering options
+                </p>
+                <div class="mb-4">
+                    <span class="badge bg-light text-dark badge-custom">
+                        <i class="bi bi-tag"></i> Version 1.0.0
+                    </span>
+                    <span class="badge bg-light text-dark badge-custom">
+                        <i class="bi bi-lightning"></i> FastAPI
+                    </span>
+                    <span class="badge bg-light text-dark badge-custom">
+                        <i class="bi bi-file-code"></i> OpenAPI 3.0
+                    </span>
+                </div>
+                <div class="d-flex gap-3 justify-content-center flex-wrap mt-4">
+                    <a href="/docs" class="btn btn-primary-custom text-white">
+                        <i class="bi bi-book"></i> Interactive Docs
+                    </a>
+                    <a href="/redoc" class="btn btn-secondary-custom">
+                        <i class="bi bi-file-text"></i> ReDoc
+                    </a>
+                    <a href="/openapi.json" class="btn btn-secondary-custom">
+                        <i class="bi bi-code-square"></i> OpenAPI Schema
+                    </a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Content Section -->
+    <section class="content-section">
+        <div class="container">
+            <!-- Features Section -->
+            <div class="mb-5">
+                <h2 class="section-title text-dark mb-5">
+                    <i class="bi bi-star"></i> Features
+                </h2>
+                <div class="row g-4">
+                    <div class="col-md-4 col-sm-6">
+                        <div class="feature-card">
+                            <div class="feature-icon">
+                                <i class="bi bi-search"></i>
+                            </div>
+                            <h4 class="fw-bold mb-3">Search Images</h4>
+                            <p class="text-muted">Search for images by keywords with advanced filtering options and precise results.</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4 col-sm-6">
+                        <div class="feature-card">
+                            <div class="feature-icon">
+                                <i class="bi bi-palette"></i>
+                            </div>
+                            <h4 class="fw-bold mb-3">Advanced Filtering</h4>
+                            <p class="text-muted">Filter by size, color, type, layout, and license to find exactly what you need.</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4 col-sm-6">
+                        <div class="feature-card">
+                            <div class="feature-icon">
+                                <i class="bi bi-globe"></i>
+                            </div>
+                            <h4 class="fw-bold mb-3">Region Support</h4>
+                            <p class="text-muted">Search in different regions worldwide with customizable regional settings.</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4 col-sm-6">
+                        <div class="feature-card">
+                            <div class="feature-icon">
+                                <i class="bi bi-check-circle"></i>
+                            </div>
+                            <h4 class="fw-bold mb-3">Image Validation</h4>
+                            <p class="text-muted">Optional URL validation ensures you get reliable and accessible image results.</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4 col-sm-6">
+                        <div class="feature-card">
+                            <div class="feature-icon">
+                                <i class="bi bi-layers"></i>
+                            </div>
+                            <h4 class="fw-bold mb-3">Pagination</h4>
+                            <p class="text-muted">Navigate through multiple pages of results efficiently with built-in pagination.</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4 col-sm-6">
+                        <div class="feature-card">
+                            <div class="feature-icon">
+                                <i class="bi bi-speedometer2"></i>
+                            </div>
+                            <h4 class="fw-bold mb-3">High Performance</h4>
+                            <p class="text-muted">Built with FastAPI for exceptional speed, reliability, and scalability.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- API Endpoints Section -->
+            <div class="mb-5">
+                <h2 class="text-center mb-5">
+                    <i class="bi bi-link-45deg"></i> API Endpoints
+                </h2>
+                <div class="row">
+                    <div class="col-lg-6 mb-3">
+                        <div class="endpoint-card endpoint-get">
+                            <div class="d-flex align-items-center mb-2">
+                                <span class="method-badge method-get">GET</span>
+                                <strong class="fs-5">/api/search</strong>
+                            </div>
+                            <p class="text-muted mb-0">Search images with query parameters. All parameters except <code>query</code> are optional.</p>
+                        </div>
+                    </div>
+                    <div class="col-lg-6 mb-3">
+                        <div class="endpoint-card endpoint-post">
+                            <div class="d-flex align-items-center mb-2">
+                                <span class="method-badge method-post">POST</span>
+                                <strong class="fs-5">/api/search</strong>
+                            </div>
+                            <p class="text-muted mb-0">Search images with JSON request body. Perfect for complex queries with many parameters.</p>
+                        </div>
+                    </div>
+                    <div class="col-lg-6 mb-3">
+                        <div class="endpoint-card endpoint-get">
+                            <div class="d-flex align-items-center mb-2">
+                                <span class="method-badge method-get">GET</span>
+                                <strong class="fs-5">/health</strong>
+                            </div>
+                            <p class="text-muted mb-0">Health check endpoint to verify API status and availability.</p>
+                        </div>
+                    </div>
+                    <div class="col-lg-6 mb-3">
+                        <div class="endpoint-card endpoint-get">
+                            <div class="d-flex align-items-center mb-2">
+                                <span class="method-badge method-get">GET</span>
+                                <strong class="fs-5">/api/info</strong>
+                            </div>
+                            <p class="text-muted mb-0">Get API information in JSON format including all available endpoints.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Example Usage Section -->
+            <div class="mb-5">
+                <h2 class="text-center mb-5">
+                    <i class="bi bi-code-slash"></i> Example Usage
+                </h2>
+                <div class="row g-4">
+                    <div class="col-md-6">
+                        <h4 class="mb-3">
+                            <i class="bi bi-terminal"></i> GET Request
+                        </h4>
+                        <div class="code-snippet">
+                            <code>curl "{{ base_url }}/api/search?query=butterfly&max_results=5"</code>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <h4 class="mb-3">
+                            <i class="bi bi-terminal"></i> POST Request
+                        </h4>
+                        <div class="code-snippet">
+                            <code>curl -X POST "{{ base_url }}/api/search" \<br>
+  -H "Content-Type: application/json" \<br>
+  -d '{"query": "butterfly", "max_results": 5}'</code>
+                        </div>
+                    </div>
+                    <div class="col-md-12">
+                        <h4 class="mb-3">
+                            <i class="bi bi-braces"></i> JavaScript Fetch
+                        </h4>
+                        <div class="code-snippet">
+                            <code><span class="keyword">fetch</span>(<span class="string">'{{ base_url }}/api/search?query=butterfly&max_results=5'</span>)<br>
+  .<span class="keyword">then</span>(response => response.<span class="keyword">json</span>())<br>
+  .<span class="keyword">then</span>(data => <span class="keyword">console</span>.<span class="keyword">log</span>(data));</code>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Response Format Section -->
+            <div class="mb-5">
+                <h2 class="text-center mb-5">
+                    <i class="bi bi-filetype-json"></i> Response Format
+                </h2>
+                <div class="code-snippet">
+                    <code>{<br>
+  <span class="string">"images"</span>: [<br>
+    {<br>
+      <span class="string">"url"</span>: <span class="string">"https://example.com/image.jpg"</span>,<br>
+      <span class="string">"title"</span>: <span class="string">"Image Title"</span>,<br>
+      <span class="string">"thumbnail"</span>: <span class="string">"https://example.com/thumb.jpg"</span>,<br>
+      <span class="string">"dimensions"</span>: {<br>
+        <span class="string">"width"</span>: <span class="string">1920</span>,<br>
+        <span class="string">"height"</span>: <span class="string">1080</span><br>
+      },<br>
+      <span class="string">"source"</span>: <span class="string">"DuckDuckGo Search Images"</span>,<br>
+      <span class="string">"position"</span>: <span class="string">1</span><br>
+    }<br>
+  ],<br>
+  <span class="string">"count"</span>: <span class="string">1</span>,<br>
+  <span class="string">"query"</span>: <span class="string">"butterfly"</span>,<br>
+  <span class="string">"max_results"</span>: <span class="string">5</span><br>
+}</code>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer-custom">
+        <div class="container text-center">
+            <p class="mb-2">
+                <i class="bi bi-heart-fill text-danger"></i> Built with FastAPI
+            </p>
+            <p class="mb-0">
+                <a href="/docs" class="text-light text-decoration-none me-3">
+                    <i class="bi bi-book"></i> API Documentation
+                </a>
+                <a href="/api/info" class="text-light text-decoration-none">
+                    <i class="bi bi-info-circle"></i> API Info (JSON)
+                </a>
+            </p>
+        </div>
+    </footer>
+
+    <!-- Bootstrap 5.3 JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
+
