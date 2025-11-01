@@ -1,0 +1,7 @@
+# For Python 3.11 or 3.12 (more stable)
+fastapi==0.115.0
+uvicorn[standard]==0.32.0
+ddgs
+requests
+pydantic==2.10.0
+
