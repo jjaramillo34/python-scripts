@@ -398,8 +398,11 @@
                             <i class="bi bi-terminal"></i> GET Request
                         </h4>
                         <div class="code-snippet">
-                            <code>curl "{{ base_url }}/api/search?query=butterfly&max_results=5"</code>
+                            <code>curl "{{ base_url }}/api/search?query=butterfly&max_results=5&api_key=YOUR_API_KEY"</code>
                         </div>
+                        <p class="text-muted small mt-2">
+                            <i class="bi bi-info-circle"></i> Or use header: <code>-H "X-API-Key: YOUR_API_KEY"</code>
+                        </p>
                     </div>
                     <div class="col-md-6">
                         <h4 class="mb-3">
@@ -408,6 +411,7 @@
                         <div class="code-snippet">
                             <code>curl -X POST "{{ base_url }}/api/search" \<br>
   -H "Content-Type: application/json" \<br>
+  -H "X-API-Key: YOUR_API_KEY" \<br>
   -d '{"query": "butterfly", "max_results": 5}'</code>
                         </div>
                     </div>
@@ -416,9 +420,18 @@
                             <i class="bi bi-braces"></i> JavaScript Fetch
                         </h4>
                         <div class="code-snippet">
-                            <code><span class="keyword">fetch</span>(<span class="string">'{{ base_url }}/api/search?query=butterfly&max_results=5'</span>)<br>
-  .<span class="keyword">then</span>(response => response.<span class="keyword">json</span>())<br>
-  .<span class="keyword">then</span>(data => <span class="keyword">console</span>.<span class="keyword">log</span>(data));</code>
+                            <code>{% raw %}<span class="keyword">fetch</span>(<span class="string">'{{ base_url }}/api/search?query=butterfly&max_results=5&api_key=YOUR_API_KEY'</span>, {<br>
+  <span class="string">method</span>: <span class="string">'GET'</span>,<br>
+  <span class="string">headers</span>: {<br>
+    <span class="string">'X-API-Key'</span>: <span class="string">'YOUR_API_KEY'</span><br>
+  }<br>
+}){% endraw %}</code>
+                        </div>
+                    </div>
+                    <div class="col-md-12 mt-3">
+                        <div class="alert alert-warning" role="alert">
+                            <i class="bi bi-shield-lock"></i> <strong>Authentication Required:</strong> All API requests require a valid API key. 
+                            Contact <a href="mailto:javier@privatediningpros.com" class="alert-link">javier@privatediningpros.com</a> for access.
                         </div>
                     </div>
                 </div>

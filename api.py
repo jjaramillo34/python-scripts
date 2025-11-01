@@ -2,15 +2,21 @@
 FastAPI application for DuckDuckGo Image Search API
 Deploy to: Heroku, Railway, Render, Fly.io, or any Python hosting service
 """
-from fastapi import FastAPI, HTTPException, Query, Request
+from fastapi import FastAPI, HTTPException, Query, Request, Depends, Security, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, HTMLResponse
 from fastapi.templating import Jinja2Templates
+from fastapi.security import APIKeyHeader, APIKeyQuery
 from ddgs import DDGS
 from typing import List, Dict, Optional
 from urllib.parse import urlparse
 import time
-from pydantic import BaseModel, Field
+import os
+from pydantic import BaseModel, Field, ConfigDict
+from dotenv import load_dotenv
+
+# Load environment variables from .env file (for local development)
+load_dotenv()
 
 app = FastAPI(
     title="DuckDuckGo Image Search API",
@@ -56,6 +62,55 @@ app = FastAPI(
 # Setup Jinja2 templates
 templates = Jinja2Templates(directory="templates")
 
+# Security Configuration
+# Get credentials from environment variables or use defaults for development
+ALLOWED_EMAIL = os.getenv("ALLOWED_EMAIL", "javier@privatediningpros.com")
+API_KEY = os.getenv("API_KEY", "secure_password_change_in_production")
+API_KEY_HEADER_NAME = "X-API-Key"
+API_KEY_QUERY_NAME = "api_key"
+
+# API Key Security
+api_key_header = APIKeyHeader(name=API_KEY_HEADER_NAME, auto_error=False)
+api_key_query = APIKeyQuery(name=API_KEY_QUERY_NAME, auto_error=False)
+
+async def verify_api_key(
+    api_key_header: str = Security(api_key_header),
+    api_key_query: str = Security(api_key_query),
+):
+    """
+    Verify API key from header or query parameter
+    """
+    api_key = api_key_header or api_key_query
+    
+    if not api_key:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="API key required. Provide it via X-API-Key header or api_key query parameter.",
+            headers={"WWW-Authenticate": "ApiKey"},
+        )
+    
+    if api_key != API_KEY:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Invalid API key. Access denied.",
+        )
+    
+    return api_key
+
+async def verify_access(
+    api_key: str = Depends(verify_api_key),
+):
+    """
+    Verify that the request is from an authorized user
+    Returns the authorized email
+    """
+    # In a real-world scenario, you might want to verify the email from the API key
+    # For now, we just verify the API key matches
+    return {
+        "email": ALLOWED_EMAIL,
+        "authenticated": True
+    }
+
 # Enable CORS for frontend access
 app.add_middleware(
     CORSMiddleware,
@@ -68,22 +123,8 @@ app.add_middleware(
 # Request model
 class ImageSearchRequest(BaseModel):
     """Request model for image search"""
-    query: str = Field(..., description="Search keywords", example="butterfly")
-    max_results: Optional[int] = Field(10, ge=1, le=100, description="Maximum number of results (1-100)", example=10)
-    region: Optional[str] = Field("us-en", description="Region code: wt-wt (worldwide), us-en (US), uk-en (UK), es-es (Spain), fr-fr (France)", example="us-en")
-    safesearch: Optional[str] = Field("off", description="Safe search level: off, moderate, on", example="off")
-    timelimit: Optional[str] = Field(None, description="Time limit filter: d (day), w (week), m (month), y (year)", example=None)
-    page: Optional[int] = Field(1, ge=1, le=10, description="Page number for pagination (1-10)", example=1)
-    backend: Optional[str] = Field("auto", description="Backend to use: auto, api, html", example="auto")
-    size: Optional[str] = Field(None, description="Size filter: Small, Medium, Large, Wallpaper", example=None)
-    color: Optional[str] = Field(None, description="Color filter: Monochrome, Red, Orange, Yellow, Green, Blue, Purple, Pink, Brown, Black, Gray, Teal, White", example=None)
-    type_image: Optional[str] = Field(None, description="Type filter: Photo, Clipart, Gif, Transparent, Line", example=None)
-    layout: Optional[str] = Field(None, description="Layout filter: Square, Tall, Wide", example=None)
-    license_image: Optional[str] = Field(None, description="License filter: Public, Share, ShareCommercially, Modify, ModifyCommercially", example=None)
-    validate_images: Optional[bool] = Field(False, description="Validate image URLs (slower but more reliable - checks if images are accessible)", example=False)
-    
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "query": "butterfly",
                 "max_results": 10,
@@ -92,6 +133,21 @@ class ImageSearchRequest(BaseModel):
                 "validate_images": False
             }
         }
+    )
+    
+    query: str = Field(..., description="Search keywords")
+    max_results: Optional[int] = Field(10, ge=1, le=100, description="Maximum number of results (1-100)")
+    region: Optional[str] = Field("us-en", description="Region code: wt-wt (worldwide), us-en (US), uk-en (UK), es-es (Spain), fr-fr (France)")
+    safesearch: Optional[str] = Field("off", description="Safe search level: off, moderate, on")
+    timelimit: Optional[str] = Field(None, description="Time limit filter: d (day), w (week), m (month), y (year)")
+    page: Optional[int] = Field(1, ge=1, le=10, description="Page number for pagination (1-10)")
+    backend: Optional[str] = Field("auto", description="Backend to use: auto, api, html")
+    size: Optional[str] = Field(None, description="Size filter: Small, Medium, Large, Wallpaper")
+    color: Optional[str] = Field(None, description="Color filter: Monochrome, Red, Orange, Yellow, Green, Blue, Purple, Pink, Brown, Black, Gray, Teal, White")
+    type_image: Optional[str] = Field(None, description="Type filter: Photo, Clipart, Gif, Transparent, Line")
+    layout: Optional[str] = Field(None, description="Layout filter: Square, Tall, Wide")
+    license_image: Optional[str] = Field(None, description="License filter: Public, Share, ShareCommercially, Modify, ModifyCommercially")
+    validate_images: Optional[bool] = Field(False, description="Validate image URLs (slower but more reliable - checks if images are accessible)")
 
 def search_with_retry(ddgs, search_params, max_retries=3, delay=2):
     """
@@ -242,21 +298,22 @@ async def api_info():
         }
     }
 
-@app.get("/api/search", tags=["Search"])
+@app.get("/api/search", tags=["Search"], dependencies=[Depends(verify_access)])
 async def search_images_get(
-    query: str = Query(..., description="Search keywords (e.g., 'butterfly', 'sunset beach')", example="butterfly"),
-    max_results: int = Query(10, ge=1, le=100, description="Maximum number of results to return (1-100)", example=10),
-    region: str = Query("us-en", description="Region code: wt-wt (worldwide), us-en (US), uk-en (UK), es-es (Spain), fr-fr (France)", example="us-en"),
-    safesearch: str = Query("off", description="Safe search level: off, moderate, on", example="off"),
-    timelimit: Optional[str] = Query(None, description="Time limit filter: d (day), w (week), m (month), y (year)", example=None),
-    page: int = Query(1, ge=1, le=10, description="Page number for pagination (1-10)", example=1),
-    backend: str = Query("auto", description="Backend to use: auto, api, html", example="auto"),
-    size: Optional[str] = Query(None, description="Size filter: Small, Medium, Large, Wallpaper", example=None),
-    color: Optional[str] = Query(None, description="Color filter: Monochrome, Red, Orange, Yellow, Green, Blue, Purple, Pink, Brown, Black, Gray, Teal, White", example=None),
-    type_image: Optional[str] = Query(None, description="Type filter: Photo, Clipart, Gif, Transparent, Line", example=None),
-    layout: Optional[str] = Query(None, description="Layout filter: Square, Tall, Wide", example=None),
-    license_image: Optional[str] = Query(None, description="License filter: Public, Share, ShareCommercially, Modify, ModifyCommercially", example=None),
-    validate_images: bool = Query(False, description="Validate image URLs (slower but more reliable - checks if images are accessible)", example=False)
+    query: str = Query(..., description="Search keywords (e.g., 'butterfly', 'sunset beach')", examples=["butterfly", "sunset beach"]),
+    max_results: int = Query(10, ge=1, le=100, description="Maximum number of results to return (1-100)", examples=[10, 20, 50]),
+    region: str = Query("us-en", description="Region code: wt-wt (worldwide), us-en (US), uk-en (UK), es-es (Spain), fr-fr (France)", examples=["us-en", "uk-en", "wt-wt"]),
+    safesearch: str = Query("off", description="Safe search level: off, moderate, on", examples=["off", "moderate", "on"]),
+    timelimit: Optional[str] = Query(None, description="Time limit filter: d (day), w (week), m (month), y (year)", examples=["d", "w", "m", "y"]),
+    page: int = Query(1, ge=1, le=10, description="Page number for pagination (1-10)", examples=[1, 2, 3]),
+    backend: str = Query("auto", description="Backend to use: auto, api, html", examples=["auto", "api", "html"]),
+    size: Optional[str] = Query(None, description="Size filter: Small, Medium, Large, Wallpaper", examples=["Small", "Medium", "Large", "Wallpaper"]),
+    color: Optional[str] = Query(None, description="Color filter: Monochrome, Red, Orange, Yellow, Green, Blue, Purple, Pink, Brown, Black, Gray, Teal, White", examples=["Red", "Blue", "Green"]),
+    type_image: Optional[str] = Query(None, description="Type filter: Photo, Clipart, Gif, Transparent, Line", examples=["Photo", "Clipart", "Gif"]),
+    layout: Optional[str] = Query(None, description="Layout filter: Square, Tall, Wide", examples=["Square", "Tall", "Wide"]),
+    license_image: Optional[str] = Query(None, description="License filter: Public, Share, ShareCommercially, Modify, ModifyCommercially", examples=["Public", "Share"]),
+    validate_images: bool = Query(False, description="Validate image URLs (slower but more reliable - checks if images are accessible)", examples=[True, False]),
+    api_key: Optional[str] = Query(None, description="API key for authentication (can also be provided via X-API-Key header)", examples=["your_api_key_here"])
 ):
     """
     Search for images using DuckDuckGo (GET endpoint)
@@ -337,7 +394,7 @@ async def search_images_get(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
-@app.post("/api/search", tags=["Search"])
+@app.post("/api/search", tags=["Search"], dependencies=[Depends(verify_access)])
 async def search_images_post(request: ImageSearchRequest):
     """
     Search for images using DuckDuckGo (POST endpoint)
