@@ -8,7 +8,7 @@ A FastAPI-based REST API for searching images using DuckDuckGo, extracted from t
 
 1. Install dependencies:
 ```bash
-pip install -r requirements_api.txt
+pip install -r requirements.txt
 ```
 
 2. Run the API:
