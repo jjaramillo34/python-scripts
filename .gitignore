@@ -180,3 +180,9 @@ pyrightconfig.json
 
 # work directory
 work/
+
+# streamlit_app directory
+streamlit_app/
+
+# DS_Store
+.DS_Store

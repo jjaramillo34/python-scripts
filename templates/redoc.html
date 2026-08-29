@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --ink: #141820;
+            --header: #10141c;
+            --accent: #0f6e62;
+            --paper: #f4f1ea;
+        }
+
+        html { box-sizing: border-box; }
+        *, *::before, *::after { box-sizing: inherit; }
+
+        body {
+            margin: 0;
+            background: var(--paper);
+            font-family: "IBM Plex Sans", -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+
+        .docs-header {
+            background: var(--header);
+            color: #e8edf5;
+            position: sticky;
+            top: 0;
+            z-index: 40;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+        }
+
+        .docs-header .row {
+            max-width: 1460px;
+            margin: 0 auto;
+            padding: 0.85rem 1.25rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+        }
+
+        .brand {
+            color: #fff;
+            text-decoration: none;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+        }
+
+        .docs-nav {
+            display: flex;
+            gap: 1rem;
+            font-size: 0.88rem;
+        }
+
+        .docs-nav a {
+            color: #c9d2de;
+            text-decoration: none;
+        }
+
+        .docs-nav a:hover { color: #fff; }
+
+        #redoc-container {
+            min-height: calc(100vh - 56px);
+        }
+
+        /* Keep ReDoc's menu below our header when it sticks */
+        .menu-content {
+            top: 56px !important;
+        }
+    </style>
+</head>
+<body>
+    <header class="docs-header">
+        <div class="row">
+            <a class="brand" href="/">Image Search API</a>
+            <nav class="docs-nav">
+                <a href="/">Home</a>
+                <a href="/docs">Swagger</a>
+                <a href="/openapi.json">OpenAPI</a>
+            </nav>
+        </div>
+    </header>
+    <div id="redoc-container"></div>
+    <noscript>ReDoc needs JavaScript to render the API reference.</noscript>
+    <script src="https://cdn.jsdelivr.net/npm/redoc@2/bundles/redoc.standalone.js"></script>
+    <script>
+        Redoc.init(
+            {{ openapi_url | tojson }},
+            {
+                scrollYOffset: 56,
+                hideDownloadButton: false,
+                expandResponses: "200,401,429",
+                jsonSampleExpandLevel: 3,
+                pathInMiddlePanel: true,
+                requiredPropsFirst: true,
+                sortPropsAlphabetically: false,
+                nativeScrollbars: true,
+                theme: {
+                    colors: {
+                        primary: { main: "#0f6e62" },
+                        success: { main: "#1b7a4a" },
+                        http: {
+                            get: "#1b7a4a",
+                            post: "#1d4ed8"
+                        },
+                        text: { primary: "#141820" },
+                        gray: { 50: "#f4f1ea" }
+                    },
+                    typography: {
+                        fontSize: "16px",
+                        fontFamily: "IBM Plex Sans, -apple-system, BlinkMacSystemFont, sans-serif",
+                        headings: {
+                            fontFamily: "IBM Plex Sans, -apple-system, BlinkMacSystemFont, sans-serif",
+                            fontWeight: "700"
+                        },
+                        code: {
+                            fontFamily: "IBM Plex Mono, ui-monospace, monospace",
+                            fontSize: "13px"
+                        },
+                        links: { color: "#0f6e62" }
+                    },
+                    sidebar: {
+                        backgroundColor: "#10141c",
+                        textColor: "#c9d2de",
+                        activeTextColor: "#ffffff",
+                        width: "280px"
+                    },
+                    rightPanel: {
+                        backgroundColor: "#161b22",
+                        textColor: "#d5dde8"
+                    },
+                    logo: { gutter: "16px" }
+                }
+            },
+            document.getElementById("redoc-container")
+        );
+    </script>
+</body>
+</html>

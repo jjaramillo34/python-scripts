@@ -4,49 +4,53 @@ A FastAPI-based REST API for searching images using DuckDuckGo, extracted from t
 
 ## Security
 
-The API is protected with API key authentication. All GET and POST requests to `/api/search` require a valid API key.
+The API refuses to start without a strong `API_KEY` (16+ characters, not a placeholder). Search endpoints require that key in the `X-API-Key` header.
 
 ### Setting Up Security
 
-1. Set environment variables (recommended for production):
+1. Generate a key:
 ```bash
-export ALLOWED_EMAIL=javier@privatediningpros.com
-export API_KEY=your_secure_password_here
+python -c "import secrets; print(secrets.token_urlsafe(32))"
 ```
 
-2. Or set them when running:
+2. Put it in `.env` (local) or your host's environment variables (production):
 ```bash
-ALLOWED_EMAIL=javier@privatediningpros.com API_KEY=your_secure_password_here python api.py
+API_KEY=paste_the_generated_key_here
+ENVIRONMENT=production
 ```
+
+Optional:
+- `API_KEYS` — extra comma-separated keys for rotation
+- `ALLOWED_ORIGINS` — browser origins allowed to call the API (empty = no CORS)
+- `ALLOWED_HOSTS` — host allowlist
+- `ENABLE_DOCS` — `/docs` is off in production unless this is `true`
+- `RATE_LIMIT_SEARCH_PER_MINUTE` — default 30
+- `RATE_LIMIT_AUTH_FAIL_PER_MINUTE` — default 10
+- `TRUST_PROXY` — trust `X-Forwarded-For` behind Railway/Render/Heroku (on by default in production)
 
 ### Using the API Key
 
-**Option 1: Header (Recommended)**
+Send the key in the header only. Query-string keys are rejected so they cannot leak in logs or Referer headers.
+
 ```bash
-curl -H "X-API-Key: your_secure_password_here" \
+curl -H "X-API-Key: your_api_key" \
   "http://localhost:8000/api/search?query=butterfly&max_results=5"
 ```
 
-**Option 2: Query Parameter**
-```bash
-curl "http://localhost:8000/api/search?query=butterfly&max_results=5&api_key=your_secure_password_here"
-```
-
-**JavaScript Example:**
 ```javascript
 fetch('http://localhost:8000/api/search?query=butterfly&max_results=5', {
   headers: {
-    'X-API-Key': 'your_secure_password_here'
+    'X-API-Key': 'your_api_key'
   }
 })
 ```
 
 ### Security Notes
 
-- The homepage (`/`) and health check (`/health`) endpoints are **not** protected
-- All `/api/search` endpoints require authentication
-- In production, use a strong, randomly generated API key
-- Never commit your API key to version control
+- The homepage (`/`) and health check (`/health`) are public
+- `/api/search` requires `X-API-Key`
+- Never commit `.env` or API keys to version control
+- Set `ENVIRONMENT=production` on the host
 
 ## Quick Start
 
@@ -62,17 +66,9 @@ pip install -r requirements.txt
 cp .env.example .env
 ```
 
-3. Edit `.env` and set your credentials:
-```bash
-ALLOWED_EMAIL=javier@privatediningpros.com
-API_KEY=your_secure_password_here
-```
+3. Edit `.env` and set a strong `API_KEY` (16+ characters).
 
-**Note:** The `.env` file is automatically loaded. You can also use environment variables directly:
-```bash
-export API_KEY=your_secure_password_here
-export ALLOWED_EMAIL=javier@privatediningpros.com
-```
+The `.env` file is loaded automatically. You can also export `API_KEY` in the shell.
 
 4. Run the API:
 ```bash
@@ -122,10 +118,9 @@ curl -X POST "http://localhost:8000/api/search" \
 4. Select repository
 5. Railway auto-detects FastAPI
 6. Add environment variables:
-   - Go to your project → **Variables** tab
-   - Click **+ New Variable**
-   - Add `ALLOWED_EMAIL` = `javier@privatediningpros.com`
-   - Add `API_KEY` = `your_secure_password_here` (use a strong random password!)
+   - `API_KEY` = a strong random secret (16+ characters)
+   - `ENVIRONMENT` = `production`
+   - `ALLOWED_ORIGINS` = your frontend origin, if browsers will call the API
 7. Deploy!
 
 **To add variables in Railway:**
@@ -133,7 +128,7 @@ curl -X POST "http://localhost:8000/api/search" \
 - Click on the service
 - Go to the **Variables** tab
 - Click **+ New Variable**
-- Add each variable: `ALLOWED_EMAIL` and `API_KEY`
+- Add `API_KEY` and `ENVIRONMENT`
 
 ### Option 2: Render
 1. Create `render.yaml`:
@@ -206,8 +201,5 @@ git push heroku main
 
 ## CORS
 
-The API includes CORS middleware allowing all origins. For production, update:
-```python
-allow_origins=["https://yourdomain.com"]
-```
+Cross-origin browser calls are denied unless you set `ALLOWED_ORIGINS` (comma-separated). Server-side callers (curl, backends) are not affected.
 

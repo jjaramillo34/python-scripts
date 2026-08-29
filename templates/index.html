@@ -4,487 +4,672 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DuckDuckGo Image Search API</title>
-    
-    <!-- Bootstrap 5.3 CSS -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Bootstrap Icons -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
-    <!-- Custom Styles -->
     <style>
         :root {
-            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            --secondary-gradient: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-            --success-gradient: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            --ink: #141820;
+            --muted: #5c6573;
+            --paper: #f4f1ea;
+            --card: #fffdf8;
+            --line: #ddd6c8;
+            --accent: #0f6e62;
+            --accent-ink: #083d37;
+            --get: #1b7a4a;
+            --post: #1d4ed8;
+            --code-bg: #161b22;
+            --header: #10141c;
+            --radius: 14px;
         }
-        
+
+        * { box-sizing: border-box; }
+
         body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            padding: 0;
+            font-family: "IBM Plex Sans", -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--paper);
+            color: var(--ink);
             margin: 0;
         }
-        
-        .hero-section {
-            background: var(--primary-gradient);
-            color: white;
-            padding: 80px 0;
+
+        a { color: var(--accent); }
+
+        .site-header {
+            background: var(--header);
+            color: #e8edf5;
+            position: sticky;
+            top: 0;
+            z-index: 20;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+        }
+
+        .site-header a {
+            color: #c9d2de;
+            text-decoration: none;
+        }
+
+        .site-header a:hover { color: #fff; }
+
+        .brand {
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            color: #fff !important;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #888;
+            display: inline-block;
+        }
+
+        .status-dot.ok { background: #3dd68c; box-shadow: 0 0 0 4px rgba(61, 214, 140, 0.15); }
+        .status-dot.bad { background: #f87171; }
+
+        .hero {
+            background:
+                radial-gradient(900px 400px at 90% -10%, rgba(15, 110, 98, 0.28), transparent 55%),
+                var(--header);
+            color: #eef3f8;
+            padding: 4.5rem 0 5.5rem;
+        }
+
+        .hero h1 {
+            font-size: clamp(2rem, 4vw, 3.2rem);
+            font-weight: 700;
+            letter-spacing: -0.03em;
+            line-height: 1.1;
+            max-width: 16ch;
+        }
+
+        .hero p.lead {
+            color: #b7c2d0;
+            max-width: 38rem;
+            font-size: 1.1rem;
+        }
+
+        .chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.08);
+            color: #d7dee8;
+            border-radius: 999px;
+            padding: 0.28rem 0.75rem;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .btn-accent {
+            background: var(--accent);
+            color: #fff;
+            border: none;
+            font-weight: 600;
+            padding: 0.7rem 1.15rem;
+            border-radius: 10px;
+        }
+
+        .btn-accent:hover { background: #0c5a50; color: #fff; }
+
+        .btn-ghost {
+            background: transparent;
+            color: #e8edf5;
+            border: 1px solid rgba(255,255,255,0.18);
+            font-weight: 600;
+            padding: 0.7rem 1.15rem;
+            border-radius: 10px;
+        }
+
+        .btn-ghost:hover { background: rgba(255,255,255,0.08); color: #fff; }
+
+        .panel {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            box-shadow: 0 10px 30px rgba(20, 24, 32, 0.04);
+        }
+
+        .lift {
+            margin-top: -3.25rem;
+        }
+
+        .section-kicker {
+            font-size: 0.78rem;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--accent);
+            font-weight: 600;
+        }
+
+        .feature {
+            height: 100%;
+            padding: 1.25rem 1.3rem;
+        }
+
+        .feature i {
+            color: var(--accent);
+            font-size: 1.25rem;
+        }
+
+        .method {
+            font-family: "IBM Plex Mono", ui-monospace, monospace;
+            font-size: 0.72rem;
+            font-weight: 500;
+            border-radius: 6px;
+            padding: 0.2rem 0.45rem;
+            letter-spacing: 0.04em;
+        }
+
+        .method-get { background: #d9f3e5; color: var(--get); }
+        .method-post { background: #dce7ff; color: var(--post); }
+
+        .endpoint {
+            padding: 1rem 1.15rem;
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            background: #fff;
+            height: 100%;
+        }
+
+        .path {
+            font-family: "IBM Plex Mono", ui-monospace, monospace;
+            font-size: 0.95rem;
+        }
+
+        .table-params {
+            font-size: 0.92rem;
+        }
+
+        .table-params code {
+            background: #efe8d8;
+            color: var(--accent-ink);
+            padding: 0.1rem 0.35rem;
+            border-radius: 4px;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 0.35rem;
+            flex-wrap: wrap;
+        }
+
+        .tab {
+            border: 1px solid var(--line);
+            background: #fff;
+            color: var(--ink);
+            border-radius: 999px;
+            padding: 0.35rem 0.85rem;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .tab.active {
+            background: var(--ink);
+            color: #fff;
+            border-color: var(--ink);
+        }
+
+        .code-wrap {
             position: relative;
+            background: var(--code-bg);
+            color: #d5dde8;
+            border-radius: 12px;
             overflow: hidden;
         }
-        
-        .hero-section::before {
-            content: '';
-            position: absolute;
-            top: -50%;
-            right: -50%;
-            width: 200%;
-            height: 200%;
-            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
-            animation: pulse 15s ease-in-out infinite;
-        }
-        
-        @keyframes pulse {
-            0%, 100% { transform: scale(1); opacity: 0.5; }
-            50% { transform: scale(1.1); opacity: 0.8; }
-        }
-        
-        .hero-content {
-            position: relative;
-            z-index: 1;
-        }
-        
-        .hero-title {
-            font-size: 3.5rem;
-            font-weight: 800;
-            margin-bottom: 1rem;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
-        }
-        
-        .hero-subtitle {
-            font-size: 1.3rem;
-            opacity: 0.95;
-            margin-bottom: 2rem;
-        }
-        
-        .feature-card {
-            background: white;
-            border-radius: 16px;
-            padding: 2rem;
-            height: 100%;
-            transition: all 0.3s ease;
-            border: 1px solid #e9ecef;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.07);
-        }
-        
-        .feature-card:hover {
-            transform: translateY(-8px);
-            box-shadow: 0 12px 24px rgba(0,0,0,0.15);
-            border-color: #667eea;
-        }
-        
-        .feature-icon {
-            font-size: 3rem;
-            background: var(--primary-gradient);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            margin-bottom: 1rem;
-        }
-        
-        .btn-primary-custom {
-            background: var(--primary-gradient);
-            border: none;
-            padding: 12px 30px;
-            font-weight: 600;
-            border-radius: 8px;
-            transition: all 0.3s ease;
-        }
-        
-        .btn-primary-custom:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
-        }
-        
-        .btn-secondary-custom {
-            background: white;
-            color: #667eea;
-            border: 2px solid #667eea;
-            padding: 12px 30px;
-            font-weight: 600;
-            border-radius: 8px;
-            transition: all 0.3s ease;
-        }
-        
-        .btn-secondary-custom:hover {
-            background: #667eea;
-            color: white;
-            transform: translateY(-2px);
-        }
-        
-        .code-snippet {
-            background: #1e1e1e;
-            color: #d4d4d4;
-            padding: 1.5rem;
-            border-radius: 8px;
-            font-family: 'Courier New', monospace;
-            font-size: 0.9rem;
+
+        .code-wrap pre {
+            margin: 0;
+            padding: 1.15rem 1.2rem 1.2rem;
+            font-family: "IBM Plex Mono", ui-monospace, monospace;
+            font-size: 0.82rem;
+            line-height: 1.55;
             overflow-x: auto;
-            border-left: 4px solid #667eea;
+            white-space: pre-wrap;
         }
-        
-        .code-snippet code {
-            color: #9cdcfe;
+
+        .copy-btn {
+            position: absolute;
+            top: 0.6rem;
+            right: 0.6rem;
+            border: 1px solid rgba(255,255,255,0.12);
+            background: rgba(255,255,255,0.06);
+            color: #d5dde8;
+            border-radius: 8px;
+            font-size: 0.75rem;
+            padding: 0.25rem 0.55rem;
         }
-        
-        .code-snippet .keyword {
-            color: #569cd6;
+
+        .copy-btn:hover { background: rgba(255,255,255,0.12); color: #fff; }
+
+        .auth-box {
+            background: #083d37;
+            color: #e7f4f1;
+            border-radius: var(--radius);
+            padding: 1.4rem 1.5rem;
         }
-        
-        .code-snippet .string {
-            color: #ce9178;
+
+        .auth-box code {
+            color: #b8eadb;
         }
-        
-        .endpoint-card {
-            background: white;
+
+        .try-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1rem;
+        }
+
+        @media (min-width: 992px) {
+            .try-grid { grid-template-columns: 320px 1fr; }
+        }
+
+        .form-control, .form-select {
+            border-color: var(--line);
+            border-radius: 10px;
+            padding: 0.65rem 0.75rem;
+        }
+
+        .form-control:focus, .form-select:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(15, 110, 98, 0.18);
+        }
+
+        .results {
+            min-height: 220px;
+            background: #faf7f0;
+            border: 1px dashed var(--line);
             border-radius: 12px;
-            padding: 1.5rem;
-            margin-bottom: 1rem;
-            border-left: 4px solid;
-            transition: all 0.3s ease;
+            padding: 1rem;
         }
-        
-        .endpoint-card:hover {
-            box-shadow: 0 6px 12px rgba(0,0,0,0.1);
-            transform: translateX(5px);
+
+        .result-card img {
+            width: 100%;
+            height: 140px;
+            object-fit: cover;
+            border-radius: 8px;
+            background: #ddd;
         }
-        
-        .endpoint-get {
-            border-left-color: #28a745;
-        }
-        
-        .endpoint-post {
-            border-left-color: #007bff;
-        }
-        
-        .method-badge {
-            padding: 0.25rem 0.75rem;
-            border-radius: 6px;
-            font-weight: 700;
-            font-size: 0.85rem;
-            margin-right: 1rem;
-        }
-        
-        .method-get {
-            background: #28a745;
-            color: white;
-        }
-        
-        .method-post {
-            background: #007bff;
-            color: white;
-        }
-        
-        .section-title {
-            font-size: 2.5rem;
-            font-weight: 700;
-            margin-bottom: 3rem;
+
+        .empty-hint {
+            color: var(--muted);
             text-align: center;
-            color: white;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+            padding: 3rem 1rem;
         }
-        
-        .content-section {
-            background: white;
-            padding: 60px 0;
-            margin-top: -50px;
-            border-radius: 30px 30px 0 0;
-            position: relative;
-            z-index: 10;
+
+        .site-footer {
+            border-top: 1px solid var(--line);
+            color: var(--muted);
+            padding: 2rem 0 2.5rem;
         }
-        
-        .badge-custom {
-            padding: 0.5rem 1rem;
-            border-radius: 20px;
-            font-weight: 600;
-            font-size: 0.9rem;
-            margin: 0.25rem;
-        }
-        
-        .footer-custom {
-            background: #2d3748;
-            color: #e2e8f0;
-            padding: 2rem 0;
-            margin-top: 60px;
-        }
-        
-        .stats-box {
-            background: var(--primary-gradient);
-            color: white;
-            border-radius: 12px;
-            padding: 2rem;
-            text-align: center;
-            margin: 1rem 0;
-        }
-        
-        .stats-number {
-            font-size: 2.5rem;
-            font-weight: 800;
-            margin-bottom: 0.5rem;
-        }
-        
-        .stats-label {
-            font-size: 1rem;
-            opacity: 0.9;
+
+        @media (prefers-reduced-motion: reduce) {
+            * { transition: none !important; }
         }
     </style>
 </head>
 <body>
-    <!-- Hero Section -->
-    <section class="hero-section">
+    <header class="site-header">
+        <div class="container py-3 d-flex align-items-center justify-content-between gap-3">
+            <a class="brand" href="/">Image Search API</a>
+            <nav class="d-none d-md-flex align-items-center gap-3 small">
+                <a href="#try">Try it</a>
+                <a href="#endpoints">Endpoints</a>
+                <a href="#examples">Examples</a>
+                {% if docs_enabled %}
+                <a href="/docs">Docs</a>
+                {% endif %}
+            </nav>
+            <div class="small d-flex align-items-center gap-2">
+                <span class="status-dot" id="health-dot" aria-hidden="true"></span>
+                <span id="health-label">Checking…</span>
+            </div>
+        </div>
+    </header>
+
+    <section class="hero">
         <div class="container">
-            <div class="hero-content text-center">
-                <h1 class="hero-title">
-                    <i class="bi bi-search"></i> DuckDuckGo Image Search API
-                </h1>
-                <p class="hero-subtitle">
-                    A powerful REST API for searching and scraping images with advanced filtering options
-                </p>
-                <div class="mb-4">
-                    <span class="badge bg-light text-dark badge-custom">
-                        <i class="bi bi-tag"></i> Version 1.0.0
-                    </span>
-                    <span class="badge bg-light text-dark badge-custom">
-                        <i class="bi bi-lightning"></i> FastAPI
-                    </span>
-                    <span class="badge bg-light text-dark badge-custom">
-                        <i class="bi bi-file-code"></i> OpenAPI 3.0
-                    </span>
-                </div>
-                <div class="d-flex gap-3 justify-content-center flex-wrap mt-4">
-                    <a href="/docs" class="btn btn-primary-custom text-white">
-                        <i class="bi bi-book"></i> Interactive Docs
-                    </a>
-                    <a href="/redoc" class="btn btn-secondary-custom">
-                        <i class="bi bi-file-text"></i> ReDoc
-                    </a>
-                    <a href="/openapi.json" class="btn btn-secondary-custom">
-                        <i class="bi bi-code-square"></i> OpenAPI Schema
-                    </a>
-                </div>
+            <div class="d-flex flex-wrap gap-2 mb-3">
+                <span class="chip">v{{ version }}</span>
+                <span class="chip">FastAPI</span>
+                <span class="chip">X-API-Key required</span>
+            </div>
+            <h1>Search images with a locked-down REST API.</h1>
+            <p class="lead mt-3 mb-4">
+                Query DuckDuckGo images with filters for size, color, type, layout, license, and region.
+                Search calls need a valid API key in the header — not in the URL.
+            </p>
+            <div class="d-flex flex-wrap gap-2">
+                <a class="btn btn-accent" href="#try"><i class="bi bi-play-circle me-1"></i> Try a search</a>
+                {% if docs_enabled %}
+                <a class="btn btn-ghost" href="/docs"><i class="bi bi-book me-1"></i> Open API docs</a>
+                {% endif %}
+                <a class="btn btn-ghost" href="#examples"><i class="bi bi-terminal me-1"></i> Copy a curl</a>
             </div>
         </div>
     </section>
 
-    <!-- Content Section -->
-    <section class="content-section">
-        <div class="container">
-            <!-- Features Section -->
-            <div class="mb-5">
-                <h2 class="section-title text-dark mb-5">
-                    <i class="bi bi-star"></i> Features
-                </h2>
-                <div class="row g-4">
-                    <div class="col-md-4 col-sm-6">
-                        <div class="feature-card">
-                            <div class="feature-icon">
-                                <i class="bi bi-search"></i>
-                            </div>
-                            <h4 class="fw-bold mb-3">Search Images</h4>
-                            <p class="text-muted">Search for images by keywords with advanced filtering options and precise results.</p>
-                        </div>
-                    </div>
-                    <div class="col-md-4 col-sm-6">
-                        <div class="feature-card">
-                            <div class="feature-icon">
-                                <i class="bi bi-palette"></i>
-                            </div>
-                            <h4 class="fw-bold mb-3">Advanced Filtering</h4>
-                            <p class="text-muted">Filter by size, color, type, layout, and license to find exactly what you need.</p>
-                        </div>
-                    </div>
-                    <div class="col-md-4 col-sm-6">
-                        <div class="feature-card">
-                            <div class="feature-icon">
-                                <i class="bi bi-globe"></i>
-                            </div>
-                            <h4 class="fw-bold mb-3">Region Support</h4>
-                            <p class="text-muted">Search in different regions worldwide with customizable regional settings.</p>
-                        </div>
-                    </div>
-                    <div class="col-md-4 col-sm-6">
-                        <div class="feature-card">
-                            <div class="feature-icon">
-                                <i class="bi bi-check-circle"></i>
-                            </div>
-                            <h4 class="fw-bold mb-3">Image Validation</h4>
-                            <p class="text-muted">Optional URL validation ensures you get reliable and accessible image results.</p>
-                        </div>
-                    </div>
-                    <div class="col-md-4 col-sm-6">
-                        <div class="feature-card">
-                            <div class="feature-icon">
-                                <i class="bi bi-layers"></i>
-                            </div>
-                            <h4 class="fw-bold mb-3">Pagination</h4>
-                            <p class="text-muted">Navigate through multiple pages of results efficiently with built-in pagination.</p>
-                        </div>
-                    </div>
-                    <div class="col-md-4 col-sm-6">
-                        <div class="feature-card">
-                            <div class="feature-icon">
-                                <i class="bi bi-speedometer2"></i>
-                            </div>
-                            <h4 class="fw-bold mb-3">High Performance</h4>
-                            <p class="text-muted">Built with FastAPI for exceptional speed, reliability, and scalability.</p>
-                        </div>
+    <main class="container pb-5">
+        <div class="panel lift p-4 p-md-5 mb-4">
+            <div class="row g-4">
+                <div class="col-md-6 col-xl-3">
+                    <div class="feature">
+                        <i class="bi bi-funnel mb-2 d-block"></i>
+                        <h3 class="h6 fw-bold mb-2">Filters that matter</h3>
+                        <p class="small text-secondary mb-0">Size, color, type, layout, license, time range, and region.</p>
                     </div>
                 </div>
-            </div>
-
-            <!-- API Endpoints Section -->
-            <div class="mb-5">
-                <h2 class="text-center mb-5">
-                    <i class="bi bi-link-45deg"></i> API Endpoints
-                </h2>
-                <div class="row">
-                    <div class="col-lg-6 mb-3">
-                        <div class="endpoint-card endpoint-get">
-                            <div class="d-flex align-items-center mb-2">
-                                <span class="method-badge method-get">GET</span>
-                                <strong class="fs-5">/api/search</strong>
-                            </div>
-                            <p class="text-muted mb-0">Search images with query parameters. All parameters except <code>query</code> are optional.</p>
-                        </div>
-                    </div>
-                    <div class="col-lg-6 mb-3">
-                        <div class="endpoint-card endpoint-post">
-                            <div class="d-flex align-items-center mb-2">
-                                <span class="method-badge method-post">POST</span>
-                                <strong class="fs-5">/api/search</strong>
-                            </div>
-                            <p class="text-muted mb-0">Search images with JSON request body. Perfect for complex queries with many parameters.</p>
-                        </div>
-                    </div>
-                    <div class="col-lg-6 mb-3">
-                        <div class="endpoint-card endpoint-get">
-                            <div class="d-flex align-items-center mb-2">
-                                <span class="method-badge method-get">GET</span>
-                                <strong class="fs-5">/health</strong>
-                            </div>
-                            <p class="text-muted mb-0">Health check endpoint to verify API status and availability.</p>
-                        </div>
-                    </div>
-                    <div class="col-lg-6 mb-3">
-                        <div class="endpoint-card endpoint-get">
-                            <div class="d-flex align-items-center mb-2">
-                                <span class="method-badge method-get">GET</span>
-                                <strong class="fs-5">/api/info</strong>
-                            </div>
-                            <p class="text-muted mb-0">Get API information in JSON format including all available endpoints.</p>
-                        </div>
+                <div class="col-md-6 col-xl-3">
+                    <div class="feature">
+                        <i class="bi bi-shield-lock mb-2 d-block"></i>
+                        <h3 class="h6 fw-bold mb-2">Header-only auth</h3>
+                        <p class="small text-secondary mb-0">Send <code>X-API-Key</code>. Query-string keys are rejected.</p>
                     </div>
                 </div>
-            </div>
-
-            <!-- Example Usage Section -->
-            <div class="mb-5">
-                <h2 class="text-center mb-5">
-                    <i class="bi bi-code-slash"></i> Example Usage
-                </h2>
-                <div class="row g-4">
-                    <div class="col-md-6">
-                        <h4 class="mb-3">
-                            <i class="bi bi-terminal"></i> GET Request
-                        </h4>
-                        <div class="code-snippet">
-                            <code>curl "{{ base_url }}/api/search?query=butterfly&max_results=5&api_key=YOUR_API_KEY"</code>
-                        </div>
-                        <p class="text-muted small mt-2">
-                            <i class="bi bi-info-circle"></i> Or use header: <code>-H "X-API-Key: YOUR_API_KEY"</code>
-                        </p>
-                    </div>
-                    <div class="col-md-6">
-                        <h4 class="mb-3">
-                            <i class="bi bi-terminal"></i> POST Request
-                        </h4>
-                        <div class="code-snippet">
-                            <code>curl -X POST "{{ base_url }}/api/search" \<br>
-  -H "Content-Type: application/json" \<br>
-  -H "X-API-Key: YOUR_API_KEY" \<br>
-  -d '{"query": "butterfly", "max_results": 5}'</code>
-                        </div>
-                    </div>
-                    <div class="col-md-12">
-                        <h4 class="mb-3">
-                            <i class="bi bi-braces"></i> JavaScript Fetch
-                        </h4>
-                        <div class="code-snippet">
-                            <code>{% raw %}<span class="keyword">fetch</span>(<span class="string">'{{ base_url }}/api/search?query=butterfly&max_results=5&api_key=YOUR_API_KEY'</span>, {<br>
-  <span class="string">method</span>: <span class="string">'GET'</span>,<br>
-  <span class="string">headers</span>: {<br>
-    <span class="string">'X-API-Key'</span>: <span class="string">'YOUR_API_KEY'</span><br>
-  }<br>
-}){% endraw %}</code>
-                        </div>
-                    </div>
-                    <div class="col-md-12 mt-3">
-                        <div class="alert alert-warning" role="alert">
-                            <i class="bi bi-shield-lock"></i> <strong>Authentication Required:</strong> All API requests require a valid API key. 
-                            Contact <a href="mailto:javier@privatediningpros.com" class="alert-link">javier@privatediningpros.com</a> for access.
-                        </div>
+                <div class="col-md-6 col-xl-3">
+                    <div class="feature">
+                        <i class="bi bi-hourglass-split mb-2 d-block"></i>
+                        <h3 class="h6 fw-bold mb-2">Rate limited</h3>
+                        <p class="small text-secondary mb-0">30 searches per minute per IP, plus a failed-auth cap.</p>
                     </div>
                 </div>
-            </div>
-
-            <!-- Response Format Section -->
-            <div class="mb-5">
-                <h2 class="text-center mb-5">
-                    <i class="bi bi-filetype-json"></i> Response Format
-                </h2>
-                <div class="code-snippet">
-                    <code>{<br>
-  <span class="string">"images"</span>: [<br>
-    {<br>
-      <span class="string">"url"</span>: <span class="string">"https://example.com/image.jpg"</span>,<br>
-      <span class="string">"title"</span>: <span class="string">"Image Title"</span>,<br>
-      <span class="string">"thumbnail"</span>: <span class="string">"https://example.com/thumb.jpg"</span>,<br>
-      <span class="string">"dimensions"</span>: {<br>
-        <span class="string">"width"</span>: <span class="string">1920</span>,<br>
-        <span class="string">"height"</span>: <span class="string">1080</span><br>
-      },<br>
-      <span class="string">"source"</span>: <span class="string">"DuckDuckGo Search Images"</span>,<br>
-      <span class="string">"position"</span>: <span class="string">1</span><br>
-    }<br>
-  ],<br>
-  <span class="string">"count"</span>: <span class="string">1</span>,<br>
-  <span class="string">"query"</span>: <span class="string">"butterfly"</span>,<br>
-  <span class="string">"max_results"</span>: <span class="string">5</span><br>
-}</code>
+                <div class="col-md-6 col-xl-3">
+                    <div class="feature">
+                        <i class="bi bi-images mb-2 d-block"></i>
+                        <h3 class="h6 fw-bold mb-2">Useful payloads</h3>
+                        <p class="small text-secondary mb-0">URL, thumbnail, title, source site, and dimensions.</p>
+                    </div>
                 </div>
             </div>
         </div>
-    </section>
 
-    <!-- Footer -->
-    <footer class="footer-custom">
-        <div class="container text-center">
-            <p class="mb-2">
-                <i class="bi bi-heart-fill text-danger"></i> Built with FastAPI
-            </p>
-            <p class="mb-0">
-                <a href="/docs" class="text-light text-decoration-none me-3">
-                    <i class="bi bi-book"></i> API Documentation
-                </a>
-                <a href="/api/info" class="text-light text-decoration-none">
-                    <i class="bi bi-info-circle"></i> API Info (JSON)
-                </a>
-            </p>
+        <section class="auth-box mb-5">
+            <div class="row align-items-center g-3">
+                <div class="col-lg-8">
+                    <p class="section-kicker text-white-50 mb-2">Authentication</p>
+                    <h2 class="h4 fw-bold mb-2">Every <code>/api/search</code> call needs a key</h2>
+                    <p class="mb-0" style="color:#c7e6df">
+                        Put the key in <code>X-API-Key</code>. The homepage and <code>/health</code> stay public.
+                        Ask <a class="link-light" href="mailto:javier@privatediningpros.com">javier@privatediningpros.com</a> if you need access.
+                    </p>
+                </div>
+                <div class="col-lg-4">
+                    <div class="code-wrap">
+                        <button class="copy-btn" type="button" data-copy="-H &quot;X-API-Key: YOUR_API_KEY&quot;">Copy</button>
+                        <pre>-H "X-API-Key: YOUR_API_KEY"</pre>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="try" class="mb-5">
+            <p class="section-kicker mb-2">Live request</p>
+            <h2 class="h3 fw-bold mb-1">Try it</h2>
+            <p class="text-secondary mb-4">Runs against this server. Your key stays in the browser and is not stored.</p>
+            <div class="panel p-3 p-md-4">
+                <div class="try-grid">
+                    <form id="try-form" class="d-flex flex-column gap-3">
+                        <div>
+                            <label class="form-label small fw-semibold mb-1" for="query">Query</label>
+                            <input class="form-control" id="query" name="query" value="butterfly" required>
+                        </div>
+                        <div>
+                            <label class="form-label small fw-semibold mb-1" for="max-results">Max results</label>
+                            <input class="form-control" id="max-results" name="max_results" type="number" min="1" max="20" value="6">
+                        </div>
+                        <div>
+                            <label class="form-label small fw-semibold mb-1" for="api-key">API key</label>
+                            <input class="form-control" id="api-key" name="api_key" type="password" autocomplete="off" placeholder="X-API-Key value" required>
+                        </div>
+                        <button class="btn btn-accent" type="submit" id="try-submit">Search</button>
+                        <p class="small text-secondary mb-0" id="try-status"></p>
+                    </form>
+                    <div class="results" id="results">
+                        <div class="empty-hint">
+                            <i class="bi bi-image fs-3 d-block mb-2"></i>
+                            Results will land here.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="endpoints" class="mb-5">
+            <p class="section-kicker mb-2">Reference</p>
+            <h2 class="h3 fw-bold mb-4">Endpoints</h2>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <div class="endpoint">
+                        <div class="d-flex align-items-center gap-2 mb-2">
+                            <span class="method method-get">GET</span>
+                            <span class="path">/api/search</span>
+                        </div>
+                        <p class="small text-secondary mb-0">Search with query parameters. Requires <code>X-API-Key</code>.</p>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="endpoint">
+                        <div class="d-flex align-items-center gap-2 mb-2">
+                            <span class="method method-post">POST</span>
+                            <span class="path">/api/search</span>
+                        </div>
+                        <p class="small text-secondary mb-0">Same search, JSON body. Requires <code>X-API-Key</code>.</p>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="endpoint">
+                        <div class="d-flex align-items-center gap-2 mb-2">
+                            <span class="method method-get">GET</span>
+                            <span class="path">/health</span>
+                        </div>
+                        <p class="small text-secondary mb-0">Public liveness check for load balancers.</p>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="endpoint">
+                        <div class="d-flex align-items-center gap-2 mb-2">
+                            <span class="method method-get">GET</span>
+                            <span class="path">/api/info</span>
+                        </div>
+                        <p class="small text-secondary mb-0">Public JSON summary of endpoints and example calls.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="mb-5">
+            <h2 class="h4 fw-bold mb-3">Search parameters</h2>
+            <div class="panel p-0 overflow-auto">
+                <table class="table table-params mb-0">
+                    <thead>
+                        <tr>
+                            <th class="ps-3">Name</th>
+                            <th>Required</th>
+                            <th class="pe-3">Notes</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td class="ps-3"><code>query</code></td><td>Yes</td><td class="pe-3">Search keywords</td></tr>
+                        <tr><td class="ps-3"><code>max_results</code></td><td>No</td><td class="pe-3">1–100, default 10</td></tr>
+                        <tr><td class="ps-3"><code>region</code></td><td>No</td><td class="pe-3"><code>us-en</code>, <code>uk-en</code>, <code>wt-wt</code></td></tr>
+                        <tr><td class="ps-3"><code>safesearch</code></td><td>No</td><td class="pe-3"><code>off</code>, <code>moderate</code>, <code>on</code></td></tr>
+                        <tr><td class="ps-3"><code>size</code></td><td>No</td><td class="pe-3">Small, Medium, Large, Wallpaper</td></tr>
+                        <tr><td class="ps-3"><code>color</code> / <code>type_image</code> / <code>layout</code></td><td>No</td><td class="pe-3">Visual filters</td></tr>
+                        <tr><td class="ps-3"><code>validate_images</code></td><td>No</td><td class="pe-3">Check that image URLs are reachable</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section id="examples" class="mb-5">
+            <p class="section-kicker mb-2">Quick start</p>
+            <div class="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-3">
+                <h2 class="h3 fw-bold mb-0">Examples</h2>
+                <div class="tabs" role="tablist">
+                    <button class="tab active" type="button" data-tab="get">GET</button>
+                    <button class="tab" type="button" data-tab="post">POST</button>
+                    <button class="tab" type="button" data-tab="js">JavaScript</button>
+                </div>
+            </div>
+
+            <div class="code-wrap tab-panel" data-panel="get">
+                <button class="copy-btn" type="button">Copy</button>
+                <pre id="ex-get">curl -H "X-API-Key: YOUR_API_KEY" \
+  "{{ base_url }}/api/search?query=butterfly&amp;max_results=5"</pre>
+            </div>
+            <div class="code-wrap tab-panel d-none" data-panel="post">
+                <button class="copy-btn" type="button">Copy</button>
+                <pre id="ex-post">curl -X POST "{{ base_url }}/api/search" \
+  -H "X-API-Key: YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"query": "butterfly", "max_results": 5}'</pre>
+            </div>
+            <div class="code-wrap tab-panel d-none" data-panel="js">
+                <button class="copy-btn" type="button">Copy</button>
+                <pre id="ex-js">fetch('{{ base_url }}/api/search?query=butterfly&amp;max_results=5', {
+  headers: {
+    'X-API-Key': 'YOUR_API_KEY'
+  }
+})</pre>
+            </div>
+        </section>
+
+        <section class="mb-4">
+            <h2 class="h4 fw-bold mb-3">Response</h2>
+            <div class="code-wrap">
+                <button class="copy-btn" type="button">Copy</button>
+                <pre>{
+  "images": [
+    {
+      "url": "https://example.com/image.jpg",
+      "title": "Image Title",
+      "thumbnail": "https://example.com/thumb.jpg",
+      "dimensions": { "width": 1920, "height": 1080 },
+      "source": "DuckDuckGo Search Images",
+      "position": 1
+    }
+  ],
+  "count": 1,
+  "query": "butterfly",
+  "max_results": 5
+}</pre>
+            </div>
+        </section>
+    </main>
+
+    <footer class="site-footer">
+        <div class="container d-flex flex-wrap justify-content-between gap-2 small">
+            <span>Built with FastAPI</span>
+            <div class="d-flex gap-3">
+                <a href="/api/info">API info</a>
+                <a href="/health">Health</a>
+                {% if docs_enabled %}
+                <a href="/docs">Swagger</a>
+                <a href="/redoc">ReDoc</a>
+                {% endif %}
+            </div>
         </div>
     </footer>
 
-    <!-- Bootstrap 5.3 JS Bundle -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const API_BASE = {{ base_url | tojson }};
+
+        async function refreshHealth() {
+            const dot = document.getElementById("health-dot");
+            const label = document.getElementById("health-label");
+            try {
+                const res = await fetch(API_BASE + "/health");
+                const data = await res.json();
+                const ok = res.ok && data.status === "healthy";
+                dot.classList.toggle("ok", ok);
+                dot.classList.toggle("bad", !ok);
+                label.textContent = ok ? "API healthy" : "API issue";
+            } catch (err) {
+                dot.classList.add("bad");
+                label.textContent = "Unreachable";
+            }
+        }
+
+        document.querySelectorAll(".tab").forEach((tab) => {
+            tab.addEventListener("click", () => {
+                document.querySelectorAll(".tab").forEach((t) => t.classList.remove("active"));
+                document.querySelectorAll(".tab-panel").forEach((p) => p.classList.add("d-none"));
+                tab.classList.add("active");
+                document.querySelector('[data-panel="' + tab.dataset.tab + '"]').classList.remove("d-none");
+            });
+        });
+
+        document.querySelectorAll(".copy-btn").forEach((btn) => {
+            btn.addEventListener("click", async () => {
+                const text = btn.dataset.copy || btn.parentElement.querySelector("pre").innerText;
+                try {
+                    await navigator.clipboard.writeText(text);
+                    const prev = btn.textContent;
+                    btn.textContent = "Copied";
+                    setTimeout(() => { btn.textContent = prev; }, 1400);
+                } catch (err) {
+                    btn.textContent = "Copy failed";
+                }
+            });
+        });
+
+        const form = document.getElementById("try-form");
+        const results = document.getElementById("results");
+        const status = document.getElementById("try-status");
+        const submit = document.getElementById("try-submit");
+
+        form.addEventListener("submit", async (event) => {
+            event.preventDefault();
+            const query = document.getElementById("query").value.trim();
+            const maxResults = document.getElementById("max-results").value;
+            const key = document.getElementById("api-key").value.trim();
+            submit.disabled = true;
+            status.textContent = "Searching…";
+            results.innerHTML = '<div class="empty-hint">Searching…</div>';
+
+            try {
+                const url = new URL(API_BASE + "/api/search");
+                url.searchParams.set("query", query);
+                url.searchParams.set("max_results", maxResults);
+                const res = await fetch(url.toString(), {
+                    headers: { "X-API-Key": key }
+                });
+                const data = await res.json().catch(() => ({}));
+                if (!res.ok) {
+                    status.textContent = "";
+                    results.innerHTML = '<div class="empty-hint">' +
+                        (data.detail || ("Request failed (" + res.status + ")")) +
+                        "</div>";
+                    return;
+                }
+                const images = data.images || [];
+                status.textContent = images.length + " result" + (images.length === 1 ? "" : "s");
+                if (!images.length) {
+                    results.innerHTML = '<div class="empty-hint">No images returned.</div>';
+                    return;
+                }
+                results.innerHTML = '<div class="row g-3">' + images.map((img) => {
+                    const src = img.thumbnail || img.url || "";
+                    const title = (img.title || img.alt || "Image").replace(/</g, "&lt;");
+                    const href = img.url || src;
+                    return '<div class="col-6 col-xl-4 result-card">' +
+                        '<a href="' + href + '" target="_blank" rel="noopener noreferrer">' +
+                        '<img src="' + src + '" alt="' + title + '">' +
+                        "</a>" +
+                        '<p class="small text-secondary mt-2 mb-0 text-truncate">' + title + "</p>" +
+                        "</div>";
+                }).join("") + "</div>";
+            } catch (err) {
+                results.innerHTML = '<div class="empty-hint">Could not reach the API.</div>';
+                status.textContent = "";
+            } finally {
+                submit.disabled = false;
+            }
+        });
+
+        refreshHealth();
+    </script>
 </body>
 </html>
-

@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui.css">
+    <style>
+        :root {
+            --ink: #141820;
+            --header: #10141c;
+            --accent: #0f6e62;
+            --paper: #f4f1ea;
+        }
+
+        html { box-sizing: border-box; }
+        *, *::before, *::after { box-sizing: inherit; }
+
+        body {
+            margin: 0;
+            background: var(--paper);
+            font-family: "IBM Plex Sans", -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+
+        .docs-header {
+            background: var(--header);
+            color: #e8edf5;
+            position: sticky;
+            top: 0;
+            z-index: 20;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+        }
+
+        .docs-header inner, .docs-wrap {
+            max-width: 1460px;
+            margin: 0 auto;
+            padding: 0 1.25rem;
+        }
+
+        .docs-header .row {
+            max-width: 1460px;
+            margin: 0 auto;
+            padding: 0.85rem 1.25rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+        }
+
+        .brand {
+            color: #fff;
+            text-decoration: none;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+        }
+
+        .docs-nav {
+            display: flex;
+            gap: 1rem;
+            font-size: 0.88rem;
+        }
+
+        .docs-nav a {
+            color: #c9d2de;
+            text-decoration: none;
+        }
+
+        .docs-nav a:hover { color: #fff; }
+
+        .swagger-ui { font-family: "IBM Plex Sans", sans-serif !important; }
+
+        .swagger-ui .topbar { display: none; }
+
+        .swagger-ui .info {
+            margin: 28px 0 16px;
+        }
+
+        .swagger-ui .info .title {
+            font-family: "IBM Plex Sans", sans-serif;
+            font-weight: 700;
+            color: var(--ink);
+        }
+
+        .swagger-ui .info a { color: var(--accent); }
+
+        .swagger-ui .scheme-container {
+            background: #fffdf8;
+            box-shadow: none;
+            border: 1px solid #ddd6c8;
+            border-radius: 12px;
+            padding: 16px 20px;
+            margin: 0 0 24px;
+        }
+
+        .swagger-ui .btn.authorize {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: #fff;
+        }
+
+        .swagger-ui .btn.authorize svg { fill: #fff; }
+
+        .swagger-ui .opblock-tag {
+            border-bottom: 1px solid #ddd6c8;
+            font-family: "IBM Plex Sans", sans-serif;
+        }
+
+        .swagger-ui .opblock.opblock-get { border-color: #9cd4b4; background: rgba(27, 122, 74, 0.04); }
+        .swagger-ui .opblock.opblock-get .opblock-summary-method { background: #1b7a4a; }
+        .swagger-ui .opblock.opblock-post { border-color: #b6c7f5; background: rgba(29, 78, 216, 0.04); }
+        .swagger-ui .opblock.opblock-post .opblock-summary-method { background: #1d4ed8; }
+
+        .swagger-ui .opblock .opblock-summary-path,
+        .swagger-ui .opblock .opblock-summary-description,
+        .swagger-ui .parameter__name,
+        .swagger-ui .microlight,
+        .swagger-ui code,
+        .swagger-ui .model-box {
+            font-family: "IBM Plex Mono", ui-monospace, monospace;
+        }
+
+        .swagger-ui .btn.execute {
+            background: var(--accent);
+            border-color: var(--accent);
+        }
+
+        .swagger-ui input[type=text],
+        .swagger-ui textarea,
+        .swagger-ui select {
+            border-radius: 8px !important;
+        }
+
+        .swagger-ui .filter-container input {
+            border: 1px solid #ddd6c8;
+        }
+    </style>
+</head>
+<body>
+    <header class="docs-header">
+        <div class="row">
+            <a class="brand" href="/">Image Search API</a>
+            <nav class="docs-nav">
+                <a href="/">Home</a>
+                <a href="/redoc">ReDoc</a>
+                <a href="/openapi.json">OpenAPI</a>
+            </nav>
+        </div>
+    </header>
+    <div id="swagger-ui"></div>
+    <script src="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui-bundle.js"></script>
+    <script>
+        window.ui = SwaggerUIBundle({
+            url: {{ openapi_url | tojson }},
+            dom_id: "#swagger-ui",
+            deepLinking: true,
+            filter: true,
+            persistAuthorization: true,
+            tryItOutEnabled: true,
+            displayRequestDuration: true,
+            docExpansion: "list",
+            defaultModelsExpandDepth: 1,
+            defaultModelExpandDepth: 2,
+            showExtensions: true,
+            showCommonExtensions: true,
+            syntaxHighlight: { theme: "idea" },
+            presets: [SwaggerUIBundle.presets.apis],
+            layout: "BaseLayout"
+        });
+    </script>
+</body>
+</html>
