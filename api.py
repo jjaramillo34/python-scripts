@@ -46,11 +46,47 @@ ALLOWED_ORIGINS = [
     for origin in os.getenv("ALLOWED_ORIGINS", "").split(",")
     if origin.strip()
 ]
-ALLOWED_HOSTS = [
-    host.strip()
-    for host in os.getenv("ALLOWED_HOSTS", "").split(",")
-    if host.strip()
-]
+
+
+def _normalize_host(value: str) -> str:
+    """Accept a hostname or full URL and return just the hostname."""
+    value = (value or "").strip()
+    if not value:
+        return ""
+    if "://" not in value:
+        value = f"https://{value}"
+    return (urlparse(value).hostname or "").lower()
+
+
+def _platform_hosts() -> list[str]:
+    """Hosts injected by Railway, Render, and similar platforms."""
+    hosts: list[str] = []
+    for key in ("RAILWAY_PUBLIC_DOMAIN", "RENDER_EXTERNAL_HOSTNAME"):
+        host = _normalize_host(os.getenv(key, ""))
+        if host:
+            hosts.append(host)
+    static_url = os.getenv("RAILWAY_STATIC_URL", "")
+    static_host = _normalize_host(static_url)
+    if static_host:
+        hosts.append(static_host)
+    if os.getenv("RAILWAY_ENVIRONMENT") or os.getenv("RAILWAY_PROJECT_ID"):
+        hosts.extend(["*.up.railway.app", "*.railway.app", "*.railway.internal"])
+    return hosts
+
+
+def _resolved_allowed_hosts() -> list[str]:
+    configured = [
+        _normalize_host(part)
+        for part in os.getenv("ALLOWED_HOSTS", "").split(",")
+    ]
+    configured = [host for host in configured if host]
+    extra = _platform_hosts()
+    if not configured and not extra:
+        return []
+    return list(dict.fromkeys([*configured, *extra, "localhost", "127.0.0.1"]))
+
+
+ALLOWED_HOSTS = _resolved_allowed_hosts()
 TRUST_PROXY = os.getenv(
     "TRUST_PROXY",
     "true" if ENVIRONMENT == "production" else "false",
@@ -286,10 +322,7 @@ if ENABLE_DOCS:
 app.add_middleware(SecurityHeadersMiddleware)
 
 if ALLOWED_HOSTS:
-    app.add_middleware(
-        TrustedHostMiddleware,
-        allowed_hosts=[*ALLOWED_HOSTS, "localhost", "127.0.0.1"],
-    )
+    app.add_middleware(TrustedHostMiddleware, allowed_hosts=ALLOWED_HOSTS)
 
 # Browser clients on other origins are denied unless ALLOWED_ORIGINS is set.
 if ALLOWED_ORIGINS:
