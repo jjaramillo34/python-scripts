@@ -167,6 +167,17 @@ _search_limiter = SlidingWindowLimiter(RATE_LIMIT_SEARCH_PER_MINUTE, 60)
 _auth_fail_limiter = SlidingWindowLimiter(RATE_LIMIT_AUTH_FAIL_PER_MINUTE, 60)
 
 
+def public_base_url(request: Request) -> str:
+    """Public origin for docs examples. Prefer forwarded proto/host behind Railway."""
+    proto = (request.headers.get("x-forwarded-proto") or "").split(",")[0].strip()
+    host = (request.headers.get("x-forwarded-host") or request.headers.get("host") or "").split(",")[0].strip()
+    scheme = proto or request.url.scheme
+    netloc = host or request.url.netloc
+    if ENVIRONMENT == "production" and scheme == "http":
+        scheme = "https"
+    return f"{scheme}://{netloc}".rstrip("/")
+
+
 def _client_ip(request: Request) -> str:
     if TRUST_PROXY:
         forwarded = request.headers.get("x-forwarded-for")
@@ -525,14 +536,11 @@ async def root(request: Request):
     """
     API Homepage - Welcome page with API information and documentation links
     """
-    # Get base URL from request
-    base_url = str(request.base_url).rstrip('/')
-    
     return templates.TemplateResponse(
         request,
         "index.html",
         {
-            "base_url": base_url,
+            "base_url": public_base_url(request),
             "docs_enabled": ENABLE_DOCS,
             "version": "1.0.0",
         },

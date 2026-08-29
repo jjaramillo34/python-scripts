@@ -24,6 +24,20 @@ def test_homepage(client):
     assert "text/html" in response.headers["content-type"]
     assert "X-API-Key" in response.text
     assert "Try it" in response.text
+    assert 'fetch("/health")' in response.text
+    assert "window.location.origin" in response.text
+
+
+def test_homepage_uses_forwarded_https(client):
+    response = client.get(
+        "/",
+        headers={
+            "X-Forwarded-Proto": "https",
+            "X-Forwarded-Host": "api.example.com",
+        },
+    )
+    assert response.status_code == 200
+    assert "https://api.example.com/api/search" in response.text
 
 
 def test_docs_and_redoc(client):

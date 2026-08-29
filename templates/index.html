@@ -574,13 +574,13 @@
     </footer>
 
     <script>
-        const API_BASE = {{ base_url | tojson }};
+        const API_BASE = window.location.origin;
 
         async function refreshHealth() {
             const dot = document.getElementById("health-dot");
             const label = document.getElementById("health-label");
             try {
-                const res = await fetch(API_BASE + "/health");
+                const res = await fetch("/health");
                 const data = await res.json();
                 const ok = res.ok && data.status === "healthy";
                 dot.classList.toggle("ok", ok);
@@ -630,7 +630,7 @@
             results.innerHTML = '<div class="empty-hint">Searching…</div>';
 
             try {
-                const url = new URL(API_BASE + "/api/search");
+                const url = new URL("/api/search", API_BASE);
                 url.searchParams.set("query", query);
                 url.searchParams.set("max_results", maxResults);
                 const res = await fetch(url.toString(), {
