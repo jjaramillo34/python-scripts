@@ -72,3 +72,12 @@ def test_address_query_spells_out_suffix_with_abbreviated_fallback():
     parsed = parse_us_address("265 South St, New York, NY 10004")
     assert build_address_query(parsed) == '"265 South Street" New York NY'
     assert build_address_query(parsed, abbreviate=True) == '"265 South St" New York NY'
+
+
+def test_parse_ignores_quotes_pasted_from_queries():
+    for raw in ["'265 South Street' New York NY", '"265 South Street" New York NY', "\u201c265 South St\u201d, New York, NY 10004"]:
+        parsed = parse_us_address(raw)
+        assert parsed is not None, raw
+        assert parsed.number == "265"
+        assert parsed.city == "New York"
+        assert parsed.state == "NY"

@@ -85,6 +85,8 @@ _STATE_NAMES = {name.lower(): code for code, name in US_STATES.items()}
 _NUMBER_RE = re.compile(r"^\s*(\d+[A-Za-z]?(?:-\d+[A-Za-z]?)?)\s+(.+?)\s*$")
 _ZIP_RE = re.compile(r"[\s,]*(\d{5}(?:-\d{4})?)\s*$")
 _QUOTED_RE = re.compile(r'"([^"]+)"')
+# Double quotes and backticks anywhere; single quotes only when not an apostrophe inside a word (O'Connell).
+_QUOTE_CHARS_RE = re.compile(r"[\"`\u201c\u201d]|(?<![A-Za-z])['\u2018\u2019]|['\u2018\u2019](?![A-Za-z])")
 _NON_ALNUM_RE = re.compile(r"[^a-z0-9]+")
 
 
@@ -128,7 +130,9 @@ def parse_us_address(address: str) -> Optional[ParsedAddress]:
     ends at the last suffix word (Street, Ave, Blvd, ...). Returns None when the
     text does not start with a house number.
     """
-    match = _NUMBER_RE.match(address or "")
+    # Accept pasted queries like '"265 South Street" New York NY' or '265 South Street' NY.
+    address = _QUOTE_CHARS_RE.sub(" ", address or "")
+    match = _NUMBER_RE.match(address)
     if not match:
         return None
     number, rest = match.group(1), match.group(2)
