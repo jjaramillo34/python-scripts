@@ -386,8 +386,8 @@
                 <div class="col-md-6 col-xl-4">
                     <div class="feature">
                         <i class="bi bi-newspaper mb-2 d-block"></i>
-                        <h3 class="h6 fw-bold mb-2">News search</h3>
-                        <p class="small text-secondary mb-0">Bing, DuckDuckGo, and Yahoo news with automatic fallback and ISO dates.</p>
+                        <h3 class="h6 fw-bold mb-2">News &amp; NYC projects</h3>
+                        <p class="small text-secondary mb-0">Recent news, plus a dated timeline of a project from NYC real-estate outlets with lead photos.</p>
                     </div>
                 </div>
                 <div class="col-md-6 col-xl-4">
@@ -452,7 +452,12 @@
                             <select class="form-select" id="mode" name="mode">
                                 <option value="images">Images</option>
                                 <option value="news">News</option>
+                                <option value="project">NYC project</option>
                             </select>
+                        </div>
+                        <div id="project-field" class="d-none">
+                            <label class="form-label small fw-semibold mb-1" for="project">Project name <span class="text-secondary fw-normal">(optional)</span></label>
+                            <input class="form-control" id="project" name="project" placeholder="Two Bridges">
                         </div>
                         <div>
                             <label class="form-label small fw-semibold mb-1" for="query">Query</label>
@@ -461,7 +466,7 @@
                         <div>
                             <label class="form-label small fw-semibold mb-1" for="address">US address <span class="text-secondary fw-normal">(optional)</span></label>
                             <input class="form-control" id="address" name="address" placeholder="265 South Street Manhattan NY 10004">
-                            <div class="form-text">Fill in a query, an address, or both.</div>
+                            <div class="form-text" id="address-hint">Fill in a query, an address, or both.</div>
                         </div>
                         <div>
                             <label class="form-label small fw-semibold mb-1" for="max-results">Max results</label>
@@ -528,6 +533,24 @@
                     <div class="endpoint">
                         <div class="d-flex align-items-center gap-2 mb-2">
                             <span class="method method-get">GET</span>
+                            <span class="path">/api/project</span>
+                        </div>
+                        <p class="small text-secondary mb-0">Coverage of a NYC project by <code>address</code> and/or <code>project</code> name: dated articles and lead photos, newest first. Requires <code>X-API-Key</code>.</p>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="endpoint">
+                        <div class="d-flex align-items-center gap-2 mb-2">
+                            <span class="method method-post">POST</span>
+                            <span class="path">/api/project</span>
+                        </div>
+                        <p class="small text-secondary mb-0">Same project search, JSON body. Requires <code>X-API-Key</code>.</p>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="endpoint">
+                        <div class="d-flex align-items-center gap-2 mb-2">
+                            <span class="method method-get">GET</span>
                             <span class="path">/health</span>
                         </div>
                         <p class="small text-secondary mb-0">Public liveness check for load balancers.</p>
@@ -560,6 +583,8 @@
                         <tr><td class="ps-3"><code>query</code></td><td>One of query / address</td><td class="pe-3">Search keywords. Quote words to require that exact phrase.</td></tr>
                         <tr><td class="ps-3"><code>address</code></td><td>One of query / address</td><td class="pe-3">US street address, e.g. <code>265 South Street Manhattan NY 10004</code>. Sent upstream as <code>"265 South Street" Manhattan NY</code>.</td></tr>
                         <tr><td class="ps-3"><code>strict</code></td><td>No</td><td class="pe-3">Drop results that don't mention the address or quoted phrases. On by default with <code>address</code>.</td></tr>
+                        <tr><td class="ps-3"><code>project</code></td><td>Project search</td><td class="pe-3"><code>/api/project</code> only. Development name, e.g. <code>Two Bridges</code>. Send with or instead of <code>address</code>.</td></tr>
+                        <tr><td class="ps-3"><code>sites</code> / <code>include_web</code> / <code>enrich</code></td><td>No</td><td class="pe-3"><code>/api/project</code> only. Outlet domains to search, add an open-web search, and read each article's date and lead photo (all on by default).</td></tr>
                         <tr><td class="ps-3"><code>max_results</code></td><td>No</td><td class="pe-3">1–100, default 10</td></tr>
                         <tr><td class="ps-3"><code>region</code></td><td>No</td><td class="pe-3"><code>us-en</code>, <code>uk-en</code>, <code>wt-wt</code></td></tr>
                         <tr><td class="ps-3"><code>safesearch</code></td><td>No</td><td class="pe-3"><code>off</code>, <code>moderate</code>, <code>on</code></td></tr>
@@ -582,6 +607,7 @@
                     <button class="tab" type="button" data-tab="post">POST</button>
                     <button class="tab" type="button" data-tab="news">News</button>
                     <button class="tab" type="button" data-tab="address">Address</button>
+                    <button class="tab" type="button" data-tab="project">Project</button>
                     <button class="tab" type="button" data-tab="js">JavaScript</button>
                 </div>
             </div>
@@ -611,6 +637,12 @@
 curl -G -H "X-API-Key: YOUR_API_KEY" "{{ base_url }}/api/news" \
   --data-urlencode "address=265 South Street Manhattan NY 10004" \
   --data-urlencode "query=construction"</pre>
+            </div>
+            <div class="code-wrap tab-panel d-none" data-panel="project">
+                <button class="copy-btn" type="button">Copy</button>
+                <pre id="ex-project">curl -G -H "X-API-Key: YOUR_API_KEY" "{{ base_url }}/api/project" \
+  --data-urlencode "address=265 South Street Manhattan NY 10004" \
+  --data-urlencode "project=Two Bridges"</pre>
             </div>
             <div class="code-wrap tab-panel d-none" data-panel="js">
                 <button class="copy-btn" type="button">Copy</button>
@@ -762,6 +794,33 @@ curl -G -H "X-API-Key: YOUR_API_KEY" "{{ base_url }}/api/news" \
             }).join("") + "</div>";
         }
 
+        function renderProject(items) {
+            return items.map((item) => {
+                const href = safeUrl(item.url);
+                const img = safeUrl(item.image);
+                const date = item.date ? esc(item.date.slice(0, 10)) : "undated";
+                const meta = [esc(item.source || item.domain), date].join(" · ");
+                const tags = (item.mentions || []).map((m) => '<span class="badge text-bg-light border me-1">' + esc(m) + "</span>").join("");
+                return '<div class="news-item d-flex gap-3">' +
+                    (img ? '<img src="' + img + '" alt="" loading="lazy">' : "") +
+                    '<div class="min-w-0">' +
+                    '<a class="fw-semibold" href="' + href + '" target="_blank" rel="noopener noreferrer">' + esc(item.title || item.url) + "</a>" +
+                    '<div class="result-meta mb-1">' + meta + "</div>" +
+                    '<p class="small text-secondary mb-1">' + esc(item.snippet) + "</p>" +
+                    "<div>" + tags + "</div>" +
+                    "</div></div>";
+            }).join("");
+        }
+
+        const modeSelect = document.getElementById("mode");
+        modeSelect.addEventListener("change", () => {
+            const isProject = modeSelect.value === "project";
+            document.getElementById("project-field").classList.toggle("d-none", !isProject);
+            document.getElementById("address-hint").textContent = isProject
+                ? "Fill in an address, a project name, or both. Query adds topic words."
+                : "Fill in a query, an address, or both.";
+        });
+
         function renderNews(articles) {
             return articles.map((item) => {
                 const href = safeUrl(item.url);
@@ -783,10 +842,13 @@ curl -G -H "X-API-Key: YOUR_API_KEY" "{{ base_url }}/api/news" \
             const mode = document.getElementById("mode").value;
             const query = document.getElementById("query").value.trim();
             const address = document.getElementById("address").value.trim();
+            const project = document.getElementById("project").value.trim();
             const maxResults = document.getElementById("max-results").value;
             const key = document.getElementById("api-key").value.trim();
-            if (!query && !address) {
-                status.textContent = "Enter a query, an address, or both.";
+            if (mode === "project" ? (!address && !project) : (!query && !address)) {
+                status.textContent = mode === "project"
+                    ? "Enter an address, a project name, or both."
+                    : "Enter a query, an address, or both.";
                 return;
             }
             submit.disabled = true;
@@ -794,9 +856,11 @@ curl -G -H "X-API-Key: YOUR_API_KEY" "{{ base_url }}/api/news" \
             results.innerHTML = '<div class="empty-hint">Searching…</div>';
 
             try {
-                const url = new URL(mode === "news" ? "/api/news" : "/api/search", API_BASE);
+                const paths = { images: "/api/search", news: "/api/news", project: "/api/project" };
+                const url = new URL(paths[mode], API_BASE);
                 if (query) url.searchParams.set("query", query);
                 if (address) url.searchParams.set("address", address);
+                if (mode === "project" && project) url.searchParams.set("project", project);
                 url.searchParams.set("max_results", maxResults);
                 const res = await fetch(url.toString(), {
                     headers: { "X-API-Key": key }
@@ -808,9 +872,11 @@ curl -G -H "X-API-Key: YOUR_API_KEY" "{{ base_url }}/api/news" \
                     results.innerHTML = '<div class="empty-hint">' + esc(detail) + "</div>";
                     return;
                 }
-                const items = (mode === "news" ? data.articles : data.images) || [];
+                const items = (mode === "news" ? data.articles : mode === "project" ? data.results : data.images) || [];
                 let summary = items.length + " result" + (items.length === 1 ? "" : "s");
-                if (data.effective_query && data.effective_query !== query) {
+                if (mode === "project" && data.identities) {
+                    summary += " for " + data.identities.join(" / ") + " · newest first";
+                } else if (data.effective_query && data.effective_query !== query) {
                     summary += " for " + data.effective_query;
                 }
                 if (data.filtered_out) {
@@ -819,10 +885,13 @@ curl -G -H "X-API-Key: YOUR_API_KEY" "{{ base_url }}/api/news" \
                 status.textContent = summary;
                 if (!items.length) {
                     const hint = data.strict ? " Strict mode is on; most sources may not mention this exact address." : "";
-                    results.innerHTML = '<div class="empty-hint">No ' + (mode === "news" ? "articles" : "images") + " returned." + esc(hint) + "</div>";
+                    const noun = { images: "images", news: "articles", project: "results" }[mode];
+                    results.innerHTML = '<div class="empty-hint">No ' + noun + " returned." + esc(hint) + "</div>";
                     return;
                 }
-                results.innerHTML = mode === "news" ? renderNews(items) : renderImages(items);
+                results.innerHTML = mode === "news" ? renderNews(items)
+                    : mode === "project" ? renderProject(items)
+                    : renderImages(items);
             } catch (err) {
                 results.innerHTML = '<div class="empty-hint">Could not reach the API.</div>';
                 status.textContent = "";

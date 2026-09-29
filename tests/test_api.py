@@ -28,6 +28,8 @@ def test_homepage(client):
     assert "window.location.origin" in response.text
     assert "/api/news" in response.text
     assert 'id="address"' in response.text
+    assert "/api/project" in response.text
+    assert 'id="project"' in response.text
 
 
 def test_homepage_uses_forwarded_https(client):

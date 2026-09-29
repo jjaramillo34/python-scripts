@@ -126,13 +126,35 @@ curl -G -H "X-API-Key: YOUR_API_KEY" "http://localhost:8000/api/news" \
   --data-urlencode "query=sun" --data-urlencode "timelimit=m"
 ```
 
+### GET / POST `/api/project`
+Coverage of a NYC development: dated articles and lead photos, newest first.
+`/api/news` only indexes recent stories, so older coverage (permits, sales, lawsuits,
+topping out) comes from here.
+
+- `address` and/or `project` (e.g. `Two Bridges`): at least one is required. Each is searched separately.
+- `query`: extra topic words added to every search, e.g. `lawsuit`
+- `sites`: outlet domains (repeat the parameter). Defaults to New York YIMBY, The Real Deal, Curbed NY, 6sqft, Crain's, amNY, BLDUP, StreetEasy, Commercial Observer, CityRealty. They are searched five at a time, which returned more relevant hits than one ten-site query.
+- `include_web` (default true): also run an open-web search
+- `enrich` (default true): fetch each article (up to 20) to read its publish date, lead image (`og:image`), and full text. Results are then kept if the article body mentions the address or project, not just the snippet. Only public http(s) hosts are fetched.
+- `strict` (default true): drop results that mention neither the address nor the project
+- `timelimit`, `region`, `max_results` (1-30)
+
+The response has `results` (title, url, source, snippet, date, image, outlet, mentions), `images`
+(unique lead photos with their article), and the `queries` that ran.
+
+```bash
+curl -G -H "X-API-Key: YOUR_API_KEY" "http://localhost:8000/api/project" \
+  --data-urlencode "address=265 South Street Manhattan NY 10004" \
+  --data-urlencode "project=Two Bridges"
+```
+
 ### Precise US address search
 
 Search engines treat `265 South Street Manhattan NY 10004` as loose words, so results drift to
 anything mentioning "South", "Manhattan", or "10004". With `address`:
 
 1. The address is parsed into number, street, city, state, and ZIP (commas optional).
-2. The query becomes `"265 South Street" Manhattan NY`: the street line is quoted, and the ZIP is left out because it pulls in unrelated listings that share it.
+2. The query becomes `"265 South Street" Manhattan NY`: the street line is quoted with the suffix spelled out ("St" becomes "Street", which engines match more reliably), and the ZIP is left out because it pulls in unrelated listings that share it. If strict filtering leaves nothing, the search is retried once with the abbreviated form.
 3. With `strict` on, results must mention the street line in the title, body, or URL. Abbreviations and slugs match: `265 South St.` and `/265-south-st` both count.
 4. Image address searches prefer Bing, which was far more precise in testing, and fall back to DuckDuckGo.
 

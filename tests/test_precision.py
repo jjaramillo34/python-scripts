@@ -57,3 +57,18 @@ def test_matches_all_normalizes_abbreviations_and_slugs():
 def test_required_phrases():
     assert required_phrases('"265 South Street" tower "Two Bridges"') == ["265 South Street", "Two Bridges"]
     assert required_phrases("no quotes") == []
+
+
+def test_expand_and_abbreviate_street():
+    from precision import abbreviate_street, expand_street
+
+    assert expand_street("South St") == "South Street"
+    assert expand_street("Pennsylvania Ave NW") == "Pennsylvania Avenue NW"
+    assert expand_street("St Marks Pl") == "St Marks Place"
+    assert abbreviate_street("South Street") == "South St"
+
+
+def test_address_query_spells_out_suffix_with_abbreviated_fallback():
+    parsed = parse_us_address("265 South St, New York, NY 10004")
+    assert build_address_query(parsed) == '"265 South Street" New York NY'
+    assert build_address_query(parsed, abbreviate=True) == '"265 South St" New York NY'

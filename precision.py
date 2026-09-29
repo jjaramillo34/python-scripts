@@ -45,6 +45,14 @@ DIRECTIONALS: Dict[str, set] = {
     "southwest": {"southwest", "sw"},
 }
 
+# Standard USPS abbreviation for each canonical suffix.
+SUFFIX_ABBREVIATIONS: Dict[str, str] = {
+    "street": "St", "avenue": "Ave", "boulevard": "Blvd", "road": "Rd", "drive": "Dr",
+    "lane": "Ln", "place": "Pl", "court": "Ct", "terrace": "Ter", "parkway": "Pkwy",
+    "highway": "Hwy", "square": "Sq", "plaza": "Plz", "circle": "Cir", "way": "Way",
+    "slip": "Slip", "row": "Row", "alley": "Aly", "expressway": "Expy", "turnpike": "Tpke",
+}
+
 _CANONICAL = {
     variant: canonical
     for table in (STREET_SUFFIXES, DIRECTIONALS)
@@ -52,6 +60,11 @@ _CANONICAL = {
     for variant in variants
 }
 _SUFFIX_WORDS = {variant for variants in STREET_SUFFIXES.values() for variant in variants}
+_SUFFIX_CANONICAL = {
+    variant: canonical
+    for canonical, variants in STREET_SUFFIXES.items()
+    for variant in variants
+}
 
 US_STATES = {
     "AL": "Alabama", "AK": "Alaska", "AZ": "Arizona", "AR": "Arkansas", "CA": "California",
@@ -153,20 +166,47 @@ def parse_us_address(address: str) -> Optional[ParsedAddress]:
     return ParsedAddress(number=number, street=street, city=city, state=state, zip_code=zip_code)
 
 
+def _restyle_street(street: str, abbreviate: bool) -> str:
+    """Rewrite suffix words (never the first word, e.g. "St Marks Pl") in full or abbreviated form."""
+    words = street.split()
+    for idx in range(1, len(words)):
+        canonical = _SUFFIX_CANONICAL.get(words[idx].lower().rstrip("."))
+        if canonical:
+            words[idx] = SUFFIX_ABBREVIATIONS[canonical] if abbreviate else canonical.title()
+    return " ".join(words)
+
+
+def expand_street(street: str) -> str:
+    """'South St' -> 'South Street'. Search engines match the spelled-out form more reliably."""
+    return _restyle_street(street, abbreviate=False)
+
+
+def abbreviate_street(street: str) -> str:
+    """'South Street' -> 'South St'."""
+    return _restyle_street(street, abbreviate=True)
+
+
 def normalize_text(text: str) -> str:
     """Lowercase, drop punctuation, and canonicalize suffixes and directionals."""
     tokens = _NON_ALNUM_RE.sub(" ", (text or "").lower()).split()
     return " " + " ".join(_CANONICAL.get(token, token) for token in tokens) + " "
 
 
-def build_address_query(address: ParsedAddress, extra: Optional[str] = None) -> str:
+def build_address_query(
+    address: ParsedAddress,
+    extra: Optional[str] = None,
+    abbreviate: bool = False,
+) -> str:
     """
     Quote the street line and add the city and state as loose context.
 
-    The ZIP is left out on purpose: news rarely prints it, and in testing it
+    The suffix is spelled out by default ("265 South Street"), which matched far
+    more reliably than "265 South St" in testing; `abbreviate=True` builds the
+    fallback form. The ZIP is left out on purpose: news rarely prints it, and it
     pulled in unrelated listings that share the ZIP.
     """
-    parts = [f'"{address.street_line}"']
+    street = abbreviate_street(address.street) if abbreviate else expand_street(address.street)
+    parts = [f'"{address.number} {street}"']
     if address.city:
         parts.append(address.city)
     if address.state:
@@ -185,3 +225,9 @@ def matches_all(texts: Iterable[str], phrases: Iterable[str]) -> bool:
     """True when every phrase appears (normalized) in the combined texts."""
     haystack = normalize_text(" ".join(text for text in texts if text))
     return all(normalize_text(phrase) in haystack for phrase in phrases)
+
+
+def matching_phrases(texts: Iterable[str], phrases: Iterable[str]) -> List[str]:
+    """The phrases that appear (normalized) in the combined texts."""
+    haystack = normalize_text(" ".join(text for text in texts if text))
+    return [phrase for phrase in phrases if normalize_text(phrase) in haystack]

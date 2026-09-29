@@ -14,12 +14,25 @@ from typing import List, Dict, Literal, Optional
 from urllib.parse import urlparse
 from threading import Lock
 from starlette.middleware.base import BaseHTTPMiddleware
+from concurrent.futures import ThreadPoolExecutor
 import hmac
+import ipaddress
+import re
 import time
 import os
 from pydantic import BaseModel, Field, ConfigDict
 from dotenv import load_dotenv
-from precision import build_address_query, matches_all, parse_us_address, required_phrases
+from precision import build_address_query, expand_street, matches_all, parse_us_address, required_phrases
+from project_search import (
+    MAX_ENRICH,
+    NYC_PROJECT_SITES,
+    build_queries as build_project_queries,
+    enrich as enrich_pages,
+    mentions as project_mentions,
+    merge_results,
+    parse_date,
+    sort_newest_first,
+)
 
 # Load environment variables from .env file (for local development)
 load_dotenv()
@@ -233,7 +246,7 @@ async def verify_api_key(
     return True
 
 
-SEARCH_PATHS = {"/api/search", "/api/news"}
+SEARCH_PATHS = {"/api/search", "/api/news", "/api/project"}
 
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
@@ -266,6 +279,10 @@ OPENAPI_TAGS = [
         "description": "News search. Requires the `X-API-Key` header. Use `address` for precise US address matches.",
     },
     {
+        "name": "Projects",
+        "description": "NYC project coverage by address and/or project name, from real-estate outlets and the open web. Requires the `X-API-Key` header.",
+    },
+    {
         "name": "Info",
         "description": "Public metadata about this API.",
     },
@@ -289,11 +306,17 @@ The street line is quoted and results that don't mention it (as "265 South St" o
 "265 South Street") are dropped. The response shows `effective_query`, the parsed
 `address`, and how many results were `filtered_out`.
 
+## NYC project coverage
+
+`/api/project` takes an `address` and/or `project` name (e.g. `Two Bridges`) and searches
+NYC real-estate outlets plus the open web. It reads each article's publish date and lead
+image, so it finds older coverage (permits, sales, lawsuits) that `/api/news` misses.
+
 ## Authentication
 
 1. Click **Authorize**
 2. Paste your API key
-3. Run any `/api/search` or `/api/news` request
+3. Run any `/api/search`, `/api/news`, or `/api/project` request
 
 The key is sent as `X-API-Key`. Query-string keys are rejected.
 
@@ -301,7 +324,7 @@ The key is sent as `X-API-Key`. Query-string keys are rejected.
 
 ## Rate limits
 
-- 30 search requests per minute per IP (images and news combined)
+- 30 search requests per minute per IP (images, news, and projects combined)
 - 10 failed authentication attempts per minute per IP
 
 ```bash
@@ -708,6 +731,7 @@ class SearchPlan(BaseModel):
     """How a request's query/address/strict flags turn into a ddgs call and a filter."""
     query: str
     effective_query: str
+    fallback_query: Optional[str] = None
     address: Optional[Dict] = None
     strict: bool = False
     required: List[str] = []
@@ -728,10 +752,12 @@ def plan_search(query: Optional[str], address: Optional[str], strict: Optional[b
                 detail="Could not parse `address`. Start with a house number, e.g. '265 South Street Manhattan NY 10004'.",
             )
         effective = build_address_query(parsed, query or None)
+        fallback = build_address_query(parsed, query or None, abbreviate=True)
         required = [parsed.street_line] + required_phrases(query)
         return SearchPlan(
             query=query or address,
             effective_query=effective,
+            fallback_query=fallback if fallback != effective else None,
             address=parsed.to_dict(),
             strict=True if strict is None else strict,
             required=required,
@@ -757,6 +783,30 @@ def _apply_strict(plan: SearchPlan, results: List[Dict], fields: tuple) -> tuple
         return results, 0
     kept = [r for r in results if matches_all((str(r.get(f) or "") for f in fields), plan.required)]
     return kept, len(results) - len(kept)
+
+
+def _search_and_filter(plan: SearchPlan, search_params: Dict, category: str, fields: tuple) -> tuple[List[Dict], int]:
+    """
+    Search, apply strict filtering, and if nothing survives retry once with the
+    other street spelling ("St" vs "Street"). Updates plan.effective_query to
+    whichever query produced the results.
+    """
+    raw_results, error = search_with_retry(DDGS(), search_params, category=category)
+    if error:
+        raise HTTPException(status_code=error.status_code, detail=error.detail)
+    results, filtered_out = _apply_strict(plan, raw_results or [], fields)
+
+    if not results and plan.strict and plan.fallback_query:
+        retry_results, retry_error = search_with_retry(
+            DDGS(), {**search_params, "query": plan.fallback_query}, category=category
+        )
+        if not retry_error:
+            kept, dropped = _apply_strict(plan, retry_results or [], fields)
+            if kept:
+                plan.effective_query = plan.fallback_query
+                return kept, dropped
+            filtered_out += dropped
+    return results, filtered_out
 
 
 def _image_backend(request: ImageSearchRequest, plan: SearchPlan) -> str:
@@ -793,11 +843,7 @@ def run_image_search(request: ImageSearchRequest) -> Dict:
     }
     search_params = {k: v for k, v in search_params.items() if v is not None}
 
-    raw_results, error = search_with_retry(DDGS(), search_params, category="images")
-    if error:
-        raise HTTPException(status_code=error.status_code, detail=error.detail)
-
-    raw_results, filtered_out = _apply_strict(plan, raw_results or [], ("title", "url", "image"))
+    raw_results, filtered_out = _search_and_filter(plan, search_params, "images", ("title", "url", "image"))
     formatted_results = format_image_results(raw_results[:max_results])
 
     if request.validate_images:
@@ -831,11 +877,7 @@ def run_news_search(request: NewsSearchRequest) -> Dict:
     }
     search_params = {k: v for k, v in search_params.items() if v is not None}
 
-    raw_results, error = search_with_retry(DDGS(), search_params, category="news")
-    if error:
-        raise HTTPException(status_code=error.status_code, detail=error.detail)
-
-    raw_results, filtered_out = _apply_strict(plan, raw_results or [], ("title", "body", "url"))
+    raw_results, filtered_out = _search_and_filter(plan, search_params, "news", ("title", "body", "url"))
     articles = format_news_results(raw_results[: request.max_results])
     return {
         "articles": articles,
@@ -845,6 +887,251 @@ def run_news_search(request: NewsSearchRequest) -> Dict:
         "address": plan.address,
         "strict": plan.strict,
         "filtered_out": filtered_out,
+        "max_results": request.max_results,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Project search (text() on NYC outlets + extract() enrichment)
+# ---------------------------------------------------------------------------
+_DOMAIN_RE = re.compile(r"^(?=.{1,253}$)([a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$")
+PROJECT_TEXT_RESULTS_PER_QUERY = 20
+PROJECT_FETCH_TIMEOUT = 6
+
+
+class ProjectSearchRequest(BaseModel):
+    """Request model for NYC project coverage search"""
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "address": "265 South Street Manhattan NY 10004",
+                "project": "Two Bridges",
+                "max_results": 10,
+                "enrich": True,
+            }
+        }
+    )
+
+    address: Optional[str] = Field(None, description="US street address of the project, e.g. '265 South Street Manhattan NY 10004'")
+    project: Optional[str] = Field(None, max_length=120, description="Project or development name, e.g. 'Two Bridges' or 'One Manhattan Square'")
+    query: Optional[str] = Field(None, max_length=120, description="Extra topic words added to every search, e.g. 'construction' or 'lawsuit'")
+    sites: Optional[List[str]] = Field(None, max_length=20, description="Outlet domains to search. Defaults to NYC real-estate outlets (see /api/info).")
+    include_web: bool = Field(True, description="Also run an open-web search besides the outlet searches")
+    enrich: bool = Field(True, description="Fetch each article to read its publish date, lead image, and full text (slower, finds more)")
+    strict: Optional[bool] = Field(None, description="Keep only results that mention the address or project name. Defaults to on.")
+    timelimit: Optional[TimeLimit] = Field(None, description="Time limit: d (day), w (week), m (month), y (year)")
+    region: str = Field("us-en", pattern=r"^[a-z]{2}-[a-z]{2}$", description="Region code, e.g. us-en")
+    max_results: int = Field(10, ge=1, le=30, description="Maximum number of results (1-30)")
+
+
+class ProjectResult(BaseModel):
+    title: str = ""
+    url: str
+    domain: str = ""
+    source: str = ""
+    snippet: str = ""
+    date: Optional[str] = None
+    image: Optional[str] = None
+    outlet: bool = False
+    mentions: List[str] = []
+    enriched: bool = False
+    position: int
+
+
+class ProjectImage(BaseModel):
+    image: str
+    title: str = ""
+    url: str
+    date: Optional[str] = None
+    source: str = ""
+
+
+class ProjectResponse(BaseModel):
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "results": [
+                    {
+                        "title": "Joe Chetrit buying Two Bridges site",
+                        "url": "https://therealdeal.com/new-york/2021/11/19/joe-chetrit-buying-second-two-bridges-site/",
+                        "domain": "therealdeal.com",
+                        "source": "The Real Deal",
+                        "snippet": "Joe Chetrit is buying the second Two Bridges development site...",
+                        "date": "2021-11-19T17:31:40+00:00",
+                        "image": "https://static.therealdeal.com/wp-content/uploads/2021/11/ft-Joe-Chetrit-buying-Two-Bridges-site.jpg",
+                        "outlet": True,
+                        "mentions": ["265 South Street", "Two Bridges"],
+                        "enriched": True,
+                        "position": 1,
+                    }
+                ],
+                "count": 1,
+                "images": [
+                    {
+                        "image": "https://static.therealdeal.com/wp-content/uploads/2021/11/ft-Joe-Chetrit-buying-Two-Bridges-site.jpg",
+                        "title": "Joe Chetrit buying Two Bridges site",
+                        "url": "https://therealdeal.com/new-york/2021/11/19/joe-chetrit-buying-second-two-bridges-site/",
+                        "date": "2021-11-19T17:31:40+00:00",
+                        "source": "The Real Deal",
+                    }
+                ],
+                "identities": ["265 South Street", "Two Bridges"],
+                "queries": ['"265 South Street" (site:newyorkyimby.com OR site:therealdeal.com OR ...)'],
+                "strict": True,
+                "filtered_out": 12,
+                "failed_queries": 0,
+                "max_results": 10,
+            }
+        }
+    )
+    results: List[ProjectResult]
+    count: int
+    images: List[ProjectImage]
+    address: Optional[ParsedAddressModel] = None
+    project: Optional[str] = None
+    identities: List[str]
+    queries: List[str]
+    sites: List[str]
+    strict: bool = True
+    filtered_out: int = 0
+    failed_queries: int = 0
+    max_results: int
+
+
+PROJECT_RESPONSES = {
+    **SEARCH_RESPONSES,
+    200: {"model": ProjectResponse, "description": "Project coverage, newest first"},
+}
+
+
+def _clean_sites(sites: Optional[List[str]]) -> List[str]:
+    if not sites:
+        return list(NYC_PROJECT_SITES)
+    cleaned = []
+    for site in sites:
+        host = _normalize_host(site).removeprefix("www.")
+        if not _DOMAIN_RE.match(host):
+            raise HTTPException(status_code=422, detail=f"Invalid site domain: {site!r}")
+        cleaned.append(host)
+    return list(dict.fromkeys(cleaned))
+
+
+def _is_public_http_url(url: str) -> bool:
+    """Only fetch public http(s) hosts; never localhost or private/reserved IPs."""
+    try:
+        parsed = urlparse(url)
+    except ValueError:
+        return False
+    host = (parsed.hostname or "").lower()
+    if parsed.scheme not in {"http", "https"} or not host or host == "localhost" or host.endswith(".local"):
+        return False
+    try:
+        ip = ipaddress.ip_address(host)
+    except ValueError:
+        return True
+    return ip.is_global
+
+
+def _fetch_page_html(url: str) -> str:
+    if not _is_public_http_url(url):
+        raise ValueError("refusing to fetch non-public URL")
+    return DDGS(timeout=PROJECT_FETCH_TIMEOUT).extract(url, fmt="text")["content"]
+
+
+def run_project_search(request: ProjectSearchRequest) -> Dict:
+    address_text = (request.address or "").strip()
+    project = (request.project or "").strip().strip('"').strip()
+    if not address_text and not project:
+        raise HTTPException(status_code=422, detail="Provide `address`, `project`, or both.")
+
+    identities: List[str] = []
+    parsed = None
+    city_hint = "New York"
+    if address_text:
+        parsed = parse_us_address(address_text)
+        if not parsed:
+            raise HTTPException(
+                status_code=422,
+                detail="Could not parse `address`. Start with a house number, e.g. '265 South Street Manhattan NY 10004'.",
+            )
+        identities.append(f"{parsed.number} {expand_street(parsed.street)}")
+        city_hint = " ".join(part for part in (parsed.city, parsed.state) if part) or city_hint
+    if project:
+        identities.append(project)
+
+    sites = _clean_sites(request.sites)
+    extra = (request.query or "").strip() or None
+    queries = build_project_queries(identities, extra, sites, request.include_web, city_hint)
+
+    def run(query: Dict[str, str]):
+        params = {
+            "query": query["query"],
+            "region": request.region,
+            "timelimit": request.timelimit,
+            "max_results": PROJECT_TEXT_RESULTS_PER_QUERY,
+        }
+        params = {k: v for k, v in params.items() if v is not None}
+        results, error = search_with_retry(DDGS(), params, category="text", max_retries=2, delay=1)
+        return query["kind"], results, error
+
+    with ThreadPoolExecutor(max_workers=len(queries), thread_name_prefix="project") as pool:
+        outcomes = list(pool.map(run, queries))
+
+    errors = [error for _, _, error in outcomes if error]
+    if len(errors) == len(outcomes):
+        raise HTTPException(status_code=errors[0].status_code, detail=errors[0].detail)
+
+    merged = merge_results([(kind, results) for kind, results, error in outcomes if not error], sites)
+    if request.enrich:
+        enrich_pages(merged[:MAX_ENRICH], _fetch_page_html)
+
+    strict = True if request.strict is None else request.strict
+    for item in merged:
+        item["mentions"] = project_mentions(item, identities)
+    kept = [item for item in merged if item["mentions"]] if strict else merged
+    kept = sort_newest_first(kept)[: request.max_results]
+
+    results = []
+    for position, item in enumerate(kept, start=1):
+        parsed_date = parse_date(item.get("date"))
+        results.append({
+            "title": item["title"],
+            "url": item["url"],
+            "domain": item["domain"],
+            "source": item.get("site_name") or item["domain"],
+            "snippet": item["snippet"] or item.get("description") or "",
+            "date": parsed_date.isoformat() if parsed_date else None,
+            "image": item.get("image"),
+            "outlet": item["outlet"],
+            "mentions": item["mentions"],
+            "enriched": bool(item.get("enriched")),
+            "position": position,
+        })
+
+    images, seen_images = [], set()
+    for result in results:
+        if result["image"] and result["image"] not in seen_images:
+            seen_images.add(result["image"])
+            images.append({
+                "image": result["image"],
+                "title": result["title"],
+                "url": result["url"],
+                "date": result["date"],
+                "source": result["source"],
+            })
+
+    return {
+        "results": results,
+        "count": len(results),
+        "images": images,
+        "address": parsed.to_dict() if parsed else None,
+        "project": project or None,
+        "identities": identities,
+        "queries": [query["query"] for query in queries],
+        "sites": sites,
+        "strict": strict,
+        "filtered_out": len(merged) - len([item for item in merged if item["mentions"]]) if strict else 0,
+        "failed_queries": len(errors),
         "max_results": request.max_results,
     }
 
@@ -870,7 +1157,8 @@ async def api_info():
     return {
         "message": "DuckDuckGo Image & News Search API",
         "version": "1.0.0",
-        "description": "A REST API for searching images and news using DuckDuckGo (ddgs), with precise US address search",
+        "description": "A REST API for searching images and news using DuckDuckGo (ddgs), with precise US address search and NYC project coverage",
+        "project_sites": NYC_PROJECT_SITES,
         "docs": {
             "swagger_ui": "/docs",
             "redoc": "/redoc",
@@ -898,6 +1186,16 @@ async def api_info():
                 "method": "POST",
                 "description": "Search news with JSON body"
             },
+            "project_get": {
+                "url": "/api/project",
+                "method": "GET",
+                "description": "Find coverage of a NYC project by address and/or project name"
+            },
+            "project_post": {
+                "url": "/api/project",
+                "method": "POST",
+                "description": "Project search with JSON body"
+            },
             "health": {
                 "url": "/health",
                 "method": "GET",
@@ -913,6 +1211,7 @@ async def api_info():
             "get_request": "curl -H 'X-API-Key: YOUR_API_KEY' 'http://localhost:8000/api/search?query=butterfly&max_results=5'",
             "post_request": "curl -X POST 'http://localhost:8000/api/search' -H 'X-API-Key: YOUR_API_KEY' -H 'Content-Type: application/json' -d '{\"query\": \"butterfly\", \"max_results\": 5}'",
             "address_images": "curl -G -H 'X-API-Key: YOUR_API_KEY' 'http://localhost:8000/api/search' --data-urlencode 'address=265 South Street Manhattan NY 10004'",
+            "project": "curl -G -H 'X-API-Key: YOUR_API_KEY' 'http://localhost:8000/api/project' --data-urlencode 'address=265 South Street Manhattan NY 10004' --data-urlencode 'project=Two Bridges'",
             "address_news": "curl -G -H 'X-API-Key: YOUR_API_KEY' 'http://localhost:8000/api/news' --data-urlencode 'address=265 South Street Manhattan NY 10004' --data-urlencode 'timelimit=y'"
         }
     }
@@ -1020,6 +1319,57 @@ def search_news_post(request: NewsSearchRequest):
     except Exception:
         raise HTTPException(status_code=500, detail="Internal server error")
 
+@app.get(
+    "/api/project",
+    tags=["Projects"],
+    summary="Find coverage of a NYC project",
+    responses=PROJECT_RESPONSES,
+    dependencies=[Depends(verify_api_key)],
+)
+def search_project_get(
+    address: Optional[str] = Query(None, description="US street address, e.g. '265 South Street Manhattan NY 10004'", examples=["265 South Street Manhattan NY 10004"]),
+    project: Optional[str] = Query(None, max_length=120, description="Project or development name", examples=["Two Bridges"]),
+    query: Optional[str] = Query(None, max_length=120, description="Extra topic words, e.g. 'construction'"),
+    sites: Optional[List[str]] = Query(None, description="Outlet domains to search (repeat the parameter). Defaults to NYC real-estate outlets."),
+    include_web: bool = Query(True, description="Also run an open-web search"),
+    enrich: bool = Query(True, description="Fetch articles for publish date, lead image, and full-text matching"),
+    strict: Optional[bool] = Query(None, description="Keep only results that mention the address or project. Defaults to on."),
+    timelimit: Optional[TimeLimit] = Query(None, description="Time limit: d, w, m, y"),
+    region: str = Query("us-en", pattern=r"^[a-z]{2}-[a-z]{2}$", description="Region code"),
+    max_results: int = Query(10, ge=1, le=30, description="Maximum number of results (1-30)"),
+):
+    """
+    Find articles and listings about a NYC development by address and/or project name.
+
+    Searches NYC real-estate outlets (YIMBY, The Real Deal, Curbed, 6sqft, Crain's, amNY,
+    BLDUP, StreetEasy, Commercial Observer, CityRealty) plus the open web, then reads each
+    article's publish date and lead image. Results are newest first; `images` collects the
+    lead images. Use this for older coverage that `/api/news` doesn't index.
+    """
+    return search_project_post(ProjectSearchRequest(
+        address=address, project=project, query=query, sites=sites,
+        include_web=include_web, enrich=enrich, strict=strict,
+        timelimit=timelimit, region=region, max_results=max_results,
+    ))
+
+@app.post(
+    "/api/project",
+    tags=["Projects"],
+    summary="Find coverage of a NYC project (JSON)",
+    responses=PROJECT_RESPONSES,
+    dependencies=[Depends(verify_api_key)],
+)
+def search_project_post(request: ProjectSearchRequest):
+    """
+    Same project search as GET, with a JSON body.
+    """
+    try:
+        return run_project_search(request)
+    except HTTPException:
+        raise
+    except Exception:
+        raise HTTPException(status_code=500, detail="Internal server error")
+
 @app.get("/health", tags=["Health"], summary="Liveness")
 async def health_check():
     """Public liveness check. Returns a simple status object."""
@@ -1050,14 +1400,14 @@ def custom_openapi():
         "type": "apiKey",
         "in": "header",
         "name": API_KEY_HEADER_NAME,
-        "description": "API key for /api/search and /api/news. Send it in the X-API-Key header.",
+        "description": "API key for /api/search, /api/news, and /api/project. Send it in the X-API-Key header.",
     }
     for path in SEARCH_PATHS:
         for method in schema.get("paths", {}).get(path, {}).values():
             if isinstance(method, dict):
                 method["security"] = [{"ApiKeyAuth": []}]
     schema["x-tagGroups"] = [
-        {"name": "API", "tags": ["Search", "News"]},
+        {"name": "API", "tags": ["Search", "News", "Projects"]},
         {"name": "Status", "tags": ["Info", "Health"]},
     ]
     app.openapi_schema = schema
