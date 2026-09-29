@@ -1,6 +1,6 @@
-# DuckDuckGo Image Search API
+# DuckDuckGo Image & News Search API
 
-A FastAPI-based REST API for searching images using DuckDuckGo, extracted from the Streamlit app.
+A FastAPI-based REST API for searching images and news using DuckDuckGo (ddgs), extracted from the Streamlit app.
 
 ## Security
 
@@ -48,7 +48,7 @@ fetch('http://localhost:8000/api/search?query=butterfly&max_results=5', {
 ### Security Notes
 
 - The homepage (`/`) and health check (`/health`) are public
-- `/api/search` requires `X-API-Key`
+- `/api/search` and `/api/news` require `X-API-Key`
 - Never commit `.env` or API keys to version control
 - Set `ENVIRONMENT=production` on the host
 
@@ -87,16 +87,20 @@ uvicorn api:app --reload --host 0.0.0.0 --port 8000
 ## API Endpoints
 
 ### GET `/api/search`
-Query parameters:
-- `query` (required): Search keywords
+Query parameters (send `query`, `address`, or both):
+- `query`: Search keywords. Quote words to require that exact phrase.
+- `address`: US street address, e.g. `265 South Street Manhattan NY 10004` (see below)
+- `strict` (default: on with `address`, off otherwise): drop results that don't mention the address or every quoted phrase
 - `max_results` (optional, default=10): Maximum results (1-100)
 - `region` (optional, default="us-en"): Region code
 - `safesearch` (optional, default="off"): Safe search level
+- `timelimit`, `size`, `color`, `type_image`, `layout`, `license_image`: filters. Any of these forces the `duckduckgo` backend, because `bing` ignores them.
+- `backend` (optional, default="auto"): `auto`, `bing`, `duckduckgo`
 - `validate_images` (optional, default=false): Validate image URLs
 
 **Example:**
 ```bash
-curl "http://localhost:8000/api/search?query=butterfly&max_results=5"
+curl -H "X-API-Key: YOUR_API_KEY" "http://localhost:8000/api/search?query=butterfly&max_results=5"
 ```
 
 ### POST `/api/search`
@@ -105,9 +109,43 @@ JSON body with same parameters as GET.
 **Example:**
 ```bash
 curl -X POST "http://localhost:8000/api/search" \
+  -H "X-API-Key: YOUR_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{"query": "butterfly", "max_results": 5}'
 ```
+
+### GET / POST `/api/news`
+Same `query` / `address` / `strict` / `max_results` / `region` / `safesearch` / `page` parameters, plus:
+- `timelimit`: `d`, `w`, `m`, `y`
+- `backend` (default="auto"): `auto`, `bing`, `duckduckgo`, `yahoo`. `auto` falls back across engines, which matters because individual news engines often return nothing.
+
+Each article has `title`, `body`, `url`, `image`, `source`, `date` (ISO 8601), `domain`, `position`.
+
+```bash
+curl -G -H "X-API-Key: YOUR_API_KEY" "http://localhost:8000/api/news" \
+  --data-urlencode "query=sun" --data-urlencode "timelimit=m"
+```
+
+### Precise US address search
+
+Search engines treat `265 South Street Manhattan NY 10004` as loose words, so results drift to
+anything mentioning "South", "Manhattan", or "10004". With `address`:
+
+1. The address is parsed into number, street, city, state, and ZIP (commas optional).
+2. The query becomes `"265 South Street" Manhattan NY`: the street line is quoted, and the ZIP is left out because it pulls in unrelated listings that share it.
+3. With `strict` on, results must mention the street line in the title, body, or URL. Abbreviations and slugs match: `265 South St.` and `/265-south-st` both count.
+4. Image address searches prefer Bing, which was far more precise in testing, and fall back to DuckDuckGo.
+
+Add `query` for topic words, e.g. `address=265 South Street Manhattan NY&query=construction`.
+Responses include `effective_query`, the parsed `address`, and `filtered_out` so you can see what happened.
+
+```bash
+curl -G -H "X-API-Key: YOUR_API_KEY" "http://localhost:8000/api/news" \
+  --data-urlencode "address=265 South Street Manhattan NY 10004"
+```
+
+News coverage of a specific street address is often sparse, so an empty strict result usually
+means no indexed article mentions it. Retry with `strict=false` to see the looser matches.
 
 ## Deployment Options
 

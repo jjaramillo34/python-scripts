@@ -54,3 +54,55 @@ def fake_images(monkeypatch):
             ]
 
     monkeypatch.setattr(api, "DDGS", FakeDDGS)
+
+
+@pytest.fixture
+def fake_ddgs(monkeypatch):
+    """Fake DDGS that records calls and returns address-flavored images and news."""
+    calls = []
+
+    class FakeDDGS:
+        def images(self, **kwargs):
+            calls.append(("images", kwargs))
+            return [
+                {
+                    "image": "https://example.com/265.jpg",
+                    "title": "NEW YORK | 265 South St. | 73 floors",
+                    "thumbnail": "https://example.com/265-thumb.jpg",
+                    "url": "https://example.com/265-south-street",
+                    "width": "1200",
+                    "height": "800",
+                },
+                {
+                    "image": "https://example.com/40-broad.jpg",
+                    "title": "40 Broad St, New York, NY 10004",
+                    "thumbnail": "https://example.com/40-thumb.jpg",
+                    "url": "https://example.com/40-broad",
+                    "width": 640,
+                    "height": 480,
+                },
+            ]
+
+        def news(self, **kwargs):
+            calls.append(("news", kwargs))
+            return [
+                {
+                    "date": "2026-08-30T14:00:00+00:00",
+                    "title": "Two Bridges tower tops out",
+                    "body": "The tower at 265 South Street rises over the Lower East Side.",
+                    "url": "https://news.example.com/two-bridges",
+                    "image": "https://news.example.com/img.jpg",
+                    "source": "Example News",
+                },
+                {
+                    "date": "2026-08-29T10:00:00+00:00",
+                    "title": "Leases are the news in Manhattan",
+                    "body": "Office demand keeps climbing downtown.",
+                    "url": "https://news.example.com/leases",
+                    "image": "",
+                    "source": "Example News",
+                },
+            ]
+
+    monkeypatch.setattr(api, "DDGS", FakeDDGS)
+    return calls

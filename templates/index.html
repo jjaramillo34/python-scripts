@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DuckDuckGo Image Search API</title>
+    <title>DuckDuckGo Image &amp; News Search API</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -285,6 +285,27 @@
             padding: 1rem;
         }
 
+        .news-item {
+            padding: 0.85rem 0;
+            border-bottom: 1px solid var(--line);
+        }
+
+        .news-item:last-child { border-bottom: none; }
+
+        .news-item img {
+            width: 96px;
+            height: 64px;
+            object-fit: cover;
+            border-radius: 8px;
+            background: #ddd;
+            flex-shrink: 0;
+        }
+
+        .result-meta {
+            font-size: 0.78rem;
+            color: var(--muted);
+        }
+
         .result-card img {
             width: 100%;
             height: 140px;
@@ -313,7 +334,7 @@
 <body>
     <header class="site-header">
         <div class="container py-3 d-flex align-items-center justify-content-between gap-3">
-            <a class="brand" href="/">Image Search API</a>
+            <a class="brand" href="/">Image &amp; News Search API</a>
             <nav class="d-none d-md-flex align-items-center gap-3 small">
                 <a href="#try">Try it</a>
                 <a href="#endpoints">Endpoints</a>
@@ -336,9 +357,10 @@
                 <span class="chip">FastAPI</span>
                 <span class="chip">X-API-Key required</span>
             </div>
-            <h1>Search images with a locked-down REST API.</h1>
+            <h1>Search images and news with a locked-down REST API.</h1>
             <p class="lead mt-3 mb-4">
-                Query DuckDuckGo images with filters for size, color, type, layout, license, and region.
+                Query DuckDuckGo images and news, with filters for size, color, type, layout, license, region, and time.
+                Pass a US street address and results are narrowed to ones that actually mention it.
                 Search calls need a valid API key in the header — not in the URL.
             </p>
             <div class="d-flex flex-wrap gap-2">
@@ -354,32 +376,46 @@
     <main class="container pb-5">
         <div class="panel lift p-4 p-md-5 mb-4">
             <div class="row g-4">
-                <div class="col-md-6 col-xl-3">
+                <div class="col-md-6 col-xl-4">
+                    <div class="feature">
+                        <i class="bi bi-geo-alt mb-2 d-block"></i>
+                        <h3 class="h6 fw-bold mb-2">Precise addresses</h3>
+                        <p class="small text-secondary mb-0">Send <code>address</code>. The street line is quoted and off-target results are dropped.</p>
+                    </div>
+                </div>
+                <div class="col-md-6 col-xl-4">
+                    <div class="feature">
+                        <i class="bi bi-newspaper mb-2 d-block"></i>
+                        <h3 class="h6 fw-bold mb-2">News search</h3>
+                        <p class="small text-secondary mb-0">Bing, DuckDuckGo, and Yahoo news with automatic fallback and ISO dates.</p>
+                    </div>
+                </div>
+                <div class="col-md-6 col-xl-4">
                     <div class="feature">
                         <i class="bi bi-funnel mb-2 d-block"></i>
                         <h3 class="h6 fw-bold mb-2">Filters that matter</h3>
                         <p class="small text-secondary mb-0">Size, color, type, layout, license, time range, and region.</p>
                     </div>
                 </div>
-                <div class="col-md-6 col-xl-3">
+                <div class="col-md-6 col-xl-4">
                     <div class="feature">
                         <i class="bi bi-shield-lock mb-2 d-block"></i>
                         <h3 class="h6 fw-bold mb-2">Header-only auth</h3>
                         <p class="small text-secondary mb-0">Send <code>X-API-Key</code>. Query-string keys are rejected.</p>
                     </div>
                 </div>
-                <div class="col-md-6 col-xl-3">
+                <div class="col-md-6 col-xl-4">
                     <div class="feature">
                         <i class="bi bi-hourglass-split mb-2 d-block"></i>
                         <h3 class="h6 fw-bold mb-2">Rate limited</h3>
-                        <p class="small text-secondary mb-0">30 searches per minute per IP, plus a failed-auth cap.</p>
+                        <p class="small text-secondary mb-0">30 searches per minute per IP across images and news, plus a failed-auth cap.</p>
                     </div>
                 </div>
-                <div class="col-md-6 col-xl-3">
+                <div class="col-md-6 col-xl-4">
                     <div class="feature">
                         <i class="bi bi-images mb-2 d-block"></i>
                         <h3 class="h6 fw-bold mb-2">Useful payloads</h3>
-                        <p class="small text-secondary mb-0">URL, thumbnail, title, source site, and dimensions.</p>
+                        <p class="small text-secondary mb-0">Image URLs and dimensions, article dates and sources, plus the exact query sent upstream.</p>
                     </div>
                 </div>
             </div>
@@ -389,7 +425,7 @@
             <div class="row align-items-center g-3">
                 <div class="col-lg-8">
                     <p class="section-kicker text-white-50 mb-2">Authentication</p>
-                    <h2 class="h4 fw-bold mb-2">Every <code>/api/search</code> call needs a key</h2>
+                    <h2 class="h4 fw-bold mb-2">Every <code>/api/search</code> and <code>/api/news</code> call needs a key</h2>
                     <p class="mb-0" style="color:#c7e6df">
                         Put the key in <code>X-API-Key</code>. The homepage and <code>/health</code> stay public.
                         Ask <a class="link-light" href="mailto:javier@privatediningpros.com">javier@privatediningpros.com</a> if you need access.
@@ -412,8 +448,20 @@
                 <div class="try-grid">
                     <form id="try-form" class="d-flex flex-column gap-3">
                         <div>
+                            <label class="form-label small fw-semibold mb-1" for="mode">Search</label>
+                            <select class="form-select" id="mode" name="mode">
+                                <option value="images">Images</option>
+                                <option value="news">News</option>
+                            </select>
+                        </div>
+                        <div>
                             <label class="form-label small fw-semibold mb-1" for="query">Query</label>
-                            <input class="form-control" id="query" name="query" value="butterfly" required>
+                            <input class="form-control" id="query" name="query" value="butterfly">
+                        </div>
+                        <div>
+                            <label class="form-label small fw-semibold mb-1" for="address">US address <span class="text-secondary fw-normal">(optional)</span></label>
+                            <input class="form-control" id="address" name="address" placeholder="265 South Street Manhattan NY 10004">
+                            <div class="form-text">Fill in a query, an address, or both.</div>
                         </div>
                         <div>
                             <label class="form-label small fw-semibold mb-1" for="max-results">Max results</label>
@@ -428,7 +476,7 @@
                     </form>
                     <div class="results" id="results">
                         <div class="empty-hint">
-                            <i class="bi bi-image fs-3 d-block mb-2"></i>
+                            <i class="bi bi-search fs-3 d-block mb-2"></i>
                             Results will land here.
                         </div>
                     </div>
@@ -446,7 +494,7 @@
                             <span class="method method-get">GET</span>
                             <span class="path">/api/search</span>
                         </div>
-                        <p class="small text-secondary mb-0">Search with query parameters. Requires <code>X-API-Key</code>.</p>
+                        <p class="small text-secondary mb-0">Search images with query parameters. Requires <code>X-API-Key</code>.</p>
                     </div>
                 </div>
                 <div class="col-md-6">
@@ -455,7 +503,25 @@
                             <span class="method method-post">POST</span>
                             <span class="path">/api/search</span>
                         </div>
-                        <p class="small text-secondary mb-0">Same search, JSON body. Requires <code>X-API-Key</code>.</p>
+                        <p class="small text-secondary mb-0">Same image search, JSON body. Requires <code>X-API-Key</code>.</p>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="endpoint">
+                        <div class="d-flex align-items-center gap-2 mb-2">
+                            <span class="method method-get">GET</span>
+                            <span class="path">/api/news</span>
+                        </div>
+                        <p class="small text-secondary mb-0">Search news with query parameters. Requires <code>X-API-Key</code>.</p>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="endpoint">
+                        <div class="d-flex align-items-center gap-2 mb-2">
+                            <span class="method method-post">POST</span>
+                            <span class="path">/api/news</span>
+                        </div>
+                        <p class="small text-secondary mb-0">Same news search, JSON body. Requires <code>X-API-Key</code>.</p>
                     </div>
                 </div>
                 <div class="col-md-6">
@@ -491,13 +557,17 @@
                         </tr>
                     </thead>
                     <tbody>
-                        <tr><td class="ps-3"><code>query</code></td><td>Yes</td><td class="pe-3">Search keywords</td></tr>
+                        <tr><td class="ps-3"><code>query</code></td><td>One of query / address</td><td class="pe-3">Search keywords. Quote words to require that exact phrase.</td></tr>
+                        <tr><td class="ps-3"><code>address</code></td><td>One of query / address</td><td class="pe-3">US street address, e.g. <code>265 South Street Manhattan NY 10004</code>. Sent upstream as <code>"265 South Street" Manhattan NY</code>.</td></tr>
+                        <tr><td class="ps-3"><code>strict</code></td><td>No</td><td class="pe-3">Drop results that don't mention the address or quoted phrases. On by default with <code>address</code>.</td></tr>
                         <tr><td class="ps-3"><code>max_results</code></td><td>No</td><td class="pe-3">1–100, default 10</td></tr>
                         <tr><td class="ps-3"><code>region</code></td><td>No</td><td class="pe-3"><code>us-en</code>, <code>uk-en</code>, <code>wt-wt</code></td></tr>
                         <tr><td class="ps-3"><code>safesearch</code></td><td>No</td><td class="pe-3"><code>off</code>, <code>moderate</code>, <code>on</code></td></tr>
-                        <tr><td class="ps-3"><code>size</code></td><td>No</td><td class="pe-3">Small, Medium, Large, Wallpaper</td></tr>
-                        <tr><td class="ps-3"><code>color</code> / <code>type_image</code> / <code>layout</code></td><td>No</td><td class="pe-3">Visual filters</td></tr>
-                        <tr><td class="ps-3"><code>validate_images</code></td><td>No</td><td class="pe-3">Check that image URLs are reachable</td></tr>
+                        <tr><td class="ps-3"><code>timelimit</code></td><td>No</td><td class="pe-3"><code>d</code>, <code>w</code>, <code>m</code>, <code>y</code></td></tr>
+                        <tr><td class="ps-3"><code>backend</code></td><td>No</td><td class="pe-3">Images: <code>auto</code>, <code>bing</code>, <code>duckduckgo</code>. News adds <code>yahoo</code>.</td></tr>
+                        <tr><td class="ps-3"><code>size</code></td><td>No</td><td class="pe-3">Images only. Small, Medium, Large, Wallpaper</td></tr>
+                        <tr><td class="ps-3"><code>color</code> / <code>type_image</code> / <code>layout</code> / <code>license_image</code></td><td>No</td><td class="pe-3">Images only. Visual filters (these use the DuckDuckGo backend)</td></tr>
+                        <tr><td class="ps-3"><code>validate_images</code></td><td>No</td><td class="pe-3">Images only. Check that image URLs are reachable</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -510,6 +580,8 @@
                 <div class="tabs" role="tablist">
                     <button class="tab active" type="button" data-tab="get">GET</button>
                     <button class="tab" type="button" data-tab="post">POST</button>
+                    <button class="tab" type="button" data-tab="news">News</button>
+                    <button class="tab" type="button" data-tab="address">Address</button>
                     <button class="tab" type="button" data-tab="js">JavaScript</button>
                 </div>
             </div>
@@ -526,6 +598,20 @@
   -H "Content-Type: application/json" \
   -d '{"query": "butterfly", "max_results": 5}'</pre>
             </div>
+            <div class="code-wrap tab-panel d-none" data-panel="news">
+                <button class="copy-btn" type="button">Copy</button>
+                <pre id="ex-news">curl -H "X-API-Key: YOUR_API_KEY" \
+  "{{ base_url }}/api/news?query=sun&amp;timelimit=m&amp;max_results=5"</pre>
+            </div>
+            <div class="code-wrap tab-panel d-none" data-panel="address">
+                <button class="copy-btn" type="button">Copy</button>
+                <pre id="ex-address">curl -G -H "X-API-Key: YOUR_API_KEY" "{{ base_url }}/api/search" \
+  --data-urlencode "address=265 South Street Manhattan NY 10004"
+
+curl -G -H "X-API-Key: YOUR_API_KEY" "{{ base_url }}/api/news" \
+  --data-urlencode "address=265 South Street Manhattan NY 10004" \
+  --data-urlencode "query=construction"</pre>
+            </div>
             <div class="code-wrap tab-panel d-none" data-panel="js">
                 <button class="copy-btn" type="button">Copy</button>
                 <pre id="ex-js">fetch('{{ base_url }}/api/search?query=butterfly&amp;max_results=5', {
@@ -537,14 +623,18 @@
         </section>
 
         <section class="mb-4">
-            <h2 class="h4 fw-bold mb-3">Response</h2>
-            <div class="code-wrap">
-                <button class="copy-btn" type="button">Copy</button>
-                <pre>{
+            <h2 class="h4 fw-bold mb-3">Responses</h2>
+            <p class="text-secondary">Both endpoints echo <code>effective_query</code> (what was sent upstream), the parsed <code>address</code>, and <code>filtered_out</code> (results dropped by strict mode).</p>
+            <div class="row g-3">
+                <div class="col-lg-6">
+                    <p class="small fw-semibold mb-2"><span class="method method-get">GET</span> <span class="path">/api/search</span></p>
+                    <div class="code-wrap">
+                        <button class="copy-btn" type="button">Copy</button>
+                        <pre>{
   "images": [
     {
-      "url": "https://example.com/image.jpg",
-      "title": "Image Title",
+      "url": "https://example.com/265-south-street.jpg",
+      "title": "NEW YORK | 265 South Street | 73 floors",
       "thumbnail": "https://example.com/thumb.jpg",
       "dimensions": { "width": 1920, "height": 1080 },
       "source": "DuckDuckGo Search Images",
@@ -552,9 +642,42 @@
     }
   ],
   "count": 1,
-  "query": "butterfly",
+  "query": "265 South Street Manhattan NY 10004",
+  "effective_query": "\"265 South Street\" Manhattan NY",
+  "address": { "number": "265", "street": "South Street", "city": "Manhattan", "state": "NY", "zip_code": "10004" },
+  "strict": true,
+  "filtered_out": 16,
+  "max_results": 10
+}</pre>
+                    </div>
+                </div>
+                <div class="col-lg-6">
+                    <p class="small fw-semibold mb-2"><span class="method method-get">GET</span> <span class="path">/api/news</span></p>
+                    <div class="code-wrap">
+                        <button class="copy-btn" type="button">Copy</button>
+                        <pre>{
+  "articles": [
+    {
+      "title": "Sun Life announces executive appointment",
+      "body": "Sun Life Financial Inc. today announced...",
+      "url": "https://example.com/news/sun-life",
+      "image": "https://example.com/news/sun.jpg",
+      "source": "Example Wire",
+      "date": "2026-09-20T13:00:00+00:00",
+      "domain": "example.com",
+      "position": 1
+    }
+  ],
+  "count": 1,
+  "query": "sun",
+  "effective_query": "sun",
+  "address": null,
+  "strict": false,
+  "filtered_out": 0,
   "max_results": 5
 }</pre>
+                    </div>
+                </div>
             </div>
         </section>
     </main>
@@ -620,18 +743,60 @@
         const status = document.getElementById("try-status");
         const submit = document.getElementById("try-submit");
 
+        const esc = (value) => String(value || "").replace(/[&<>"']/g, (ch) => ({
+            "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+        })[ch]);
+        const safeUrl = (value) => /^https?:\/\//i.test(value || "") ? esc(value) : "";
+
+        function renderImages(images) {
+            return '<div class="row g-3">' + images.map((img) => {
+                const src = safeUrl(img.thumbnail || img.url);
+                const title = esc(img.title || img.alt || "Image");
+                const href = safeUrl(img.url) || src;
+                return '<div class="col-6 col-xl-4 result-card">' +
+                    '<a href="' + href + '" target="_blank" rel="noopener noreferrer">' +
+                    '<img src="' + src + '" alt="' + title + '" loading="lazy">' +
+                    "</a>" +
+                    '<p class="small text-secondary mt-2 mb-0 text-truncate">' + title + "</p>" +
+                    "</div>";
+            }).join("") + "</div>";
+        }
+
+        function renderNews(articles) {
+            return articles.map((item) => {
+                const href = safeUrl(item.url);
+                const img = safeUrl(item.image);
+                const date = item.date ? esc(item.date.slice(0, 10)) : "";
+                const meta = [esc(item.source || item.domain), date].filter(Boolean).join(" · ");
+                return '<div class="news-item d-flex gap-3">' +
+                    (img ? '<img src="' + img + '" alt="" loading="lazy">' : "") +
+                    '<div class="min-w-0">' +
+                    '<a class="fw-semibold" href="' + href + '" target="_blank" rel="noopener noreferrer">' + esc(item.title || item.url) + "</a>" +
+                    '<div class="result-meta mb-1">' + meta + "</div>" +
+                    '<p class="small text-secondary mb-0">' + esc(item.body) + "</p>" +
+                    "</div></div>";
+            }).join("");
+        }
+
         form.addEventListener("submit", async (event) => {
             event.preventDefault();
+            const mode = document.getElementById("mode").value;
             const query = document.getElementById("query").value.trim();
+            const address = document.getElementById("address").value.trim();
             const maxResults = document.getElementById("max-results").value;
             const key = document.getElementById("api-key").value.trim();
+            if (!query && !address) {
+                status.textContent = "Enter a query, an address, or both.";
+                return;
+            }
             submit.disabled = true;
             status.textContent = "Searching…";
             results.innerHTML = '<div class="empty-hint">Searching…</div>';
 
             try {
-                const url = new URL("/api/search", API_BASE);
-                url.searchParams.set("query", query);
+                const url = new URL(mode === "news" ? "/api/news" : "/api/search", API_BASE);
+                if (query) url.searchParams.set("query", query);
+                if (address) url.searchParams.set("address", address);
                 url.searchParams.set("max_results", maxResults);
                 const res = await fetch(url.toString(), {
                     headers: { "X-API-Key": key }
@@ -639,28 +804,25 @@
                 const data = await res.json().catch(() => ({}));
                 if (!res.ok) {
                     status.textContent = "";
-                    results.innerHTML = '<div class="empty-hint">' +
-                        (data.detail || ("Request failed (" + res.status + ")")) +
-                        "</div>";
+                    const detail = typeof data.detail === "string" ? data.detail : ("Request failed (" + res.status + ")");
+                    results.innerHTML = '<div class="empty-hint">' + esc(detail) + "</div>";
                     return;
                 }
-                const images = data.images || [];
-                status.textContent = images.length + " result" + (images.length === 1 ? "" : "s");
-                if (!images.length) {
-                    results.innerHTML = '<div class="empty-hint">No images returned.</div>';
+                const items = (mode === "news" ? data.articles : data.images) || [];
+                let summary = items.length + " result" + (items.length === 1 ? "" : "s");
+                if (data.effective_query && data.effective_query !== query) {
+                    summary += " for " + data.effective_query;
+                }
+                if (data.filtered_out) {
+                    summary += " · " + data.filtered_out + " off-target dropped";
+                }
+                status.textContent = summary;
+                if (!items.length) {
+                    const hint = data.strict ? " Strict mode is on; most sources may not mention this exact address." : "";
+                    results.innerHTML = '<div class="empty-hint">No ' + (mode === "news" ? "articles" : "images") + " returned." + esc(hint) + "</div>";
                     return;
                 }
-                results.innerHTML = '<div class="row g-3">' + images.map((img) => {
-                    const src = img.thumbnail || img.url || "";
-                    const title = (img.title || img.alt || "Image").replace(/</g, "&lt;");
-                    const href = img.url || src;
-                    return '<div class="col-6 col-xl-4 result-card">' +
-                        '<a href="' + href + '" target="_blank" rel="noopener noreferrer">' +
-                        '<img src="' + src + '" alt="' + title + '">' +
-                        "</a>" +
-                        '<p class="small text-secondary mt-2 mb-0 text-truncate">' + title + "</p>" +
-                        "</div>";
-                }).join("") + "</div>";
+                results.innerHTML = mode === "news" ? renderNews(items) : renderImages(items);
             } catch (err) {
                 results.innerHTML = '<div class="empty-hint">Could not reach the API.</div>';
                 status.textContent = "";

@@ -1,6 +1,6 @@
 fastapi>=0.115.0
 uvicorn[standard]>=0.32.0
-ddgs
+ddgs>=9.16.0
 requests
 selenium
 pydantic>=2.10.0
